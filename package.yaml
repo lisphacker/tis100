@@ -31,7 +31,7 @@ default-extensions:
 # - FlexibleInstances
 # - FunctionalDependencies
 - GADTs
-# - GeneralizedNewtypeDeriving
+- GeneralizedNewtypeDeriving
 # - InstanceSigs
 # - KindSignatures
 - LambdaCase
@@ -61,8 +61,8 @@ library:
 
 # Runnable executable for our application
 executables:
-  tis100:
-    source-dirs: app
+  tissim:
+    source-dirs: sim
     main: Main.hs
     dependencies:
     - tis100
