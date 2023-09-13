@@ -1,0 +1,87 @@
+name:                tis100
+version:             0.0.1
+#synopsis:
+#description:
+homepage:            https://github.com/lisphacker/tis100#readme
+license:             BSD3
+author:              Gautham Ganapathy
+maintainer:          gauthamg@gmail.com
+copyright:           (c) Gautham Ganapathy, 2023
+category:            Compilers/Interpreters
+extra-source-files:
+- README.md
+
+default-extensions:
+# - ApplicativeDo
+# - BangPatterns
+# - ConstraintKinds
+# - DataKinds
+# - DefaultSignatures
+# - DeriveAnyClass
+# - DeriveFoldable
+# - DeriveFunctor
+# - DeriveGeneric
+# - DeriveLift
+# - DeriveTraversable
+# - DerivingStrategies
+# - DuplicateRecordFields
+# - EmptyCase
+# - ExistentialQuantification
+- FlexibleContexts
+# - FlexibleInstances
+# - FunctionalDependencies
+- GADTs
+# - GeneralizedNewtypeDeriving
+# - InstanceSigs
+# - KindSignatures
+- LambdaCase
+# - MultiParamTypeClasses
+# - MultiWayIf
+# - NamedFieldPuns
+- OverloadedStrings
+# - PatternSynonyms
+# - RankNTypes
+# - RecordWildCards
+# - ScopedTypeVariables
+# - StandaloneDeriving
+# - TupleSections
+# - TypeApplications
+# - TypeFamilies
+# - TypeFamilyDependencies
+# - TypeOperators
+
+dependencies:
+- name: base
+- string-interpolate
+
+# The library contains all of our application code.
+# The executable defined below is just a thin wrapper.
+library:
+  source-dirs: src
+
+# Runnable executable for our application
+executables:
+  tis100:
+    source-dirs: app
+    main: Main.hs
+    dependencies:
+    - tis100
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
+
+# Test suite
+tests:
+  tis100-test:
+    source-dirs: test
+    main: Main.hs
+    dependencies:
+    - tis100
+    - hspec
+    - tasty
+    - tasty-hspec
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
