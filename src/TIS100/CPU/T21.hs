@@ -1,4 +1,7 @@
-module CPU.T21 where
+module TIS100.CPU.T21 where
+
+import TIS100.CPU.Base (Value (..))
+import Prelude hiding (last)
 
 data Register' = ACC | NIL
   deriving (Eq, Show)
@@ -8,9 +11,6 @@ data Port' = ANY | LAST | LEFT | RIGHT | UP | DOWN
 
 data RegisterOrPort = Register Register' | Port Port'
   deriving (Eq, Show)
-
-newtype Value = Value Int
-  deriving (Eq, Show, Num)
 
 newtype Address = Address Int
   deriving (Eq, Show, Num)
@@ -34,6 +34,20 @@ data Instruction
   | JRO RegisterOrPort
   deriving (Eq, Show)
 
+data RunState
+  = Running
+  | WaitingOnReadLeft
+  | WaitingOnReadRight
+  | WaitingOnReadUp
+  | WaitingOnReadDown
+  | WaitingOnReadAny
+  | WaitingOnWriteLeft
+  | WaitingOnWriteRight
+  | WaitingOnWriteUp
+  | WaitingOnWriteDown
+  | WaitingOnWriteAny
+  deriving (Eq, Show)
+
 data TileState = TileState
   { acc :: Value,
     bak :: Value,
@@ -43,6 +57,22 @@ data TileState = TileState
     down :: Maybe Value,
     last :: Port',
     program :: [Instruction],
-    pc :: Int
+    pc :: Address,
+    runState :: RunState
   }
   deriving (Eq, Show)
+
+createTileState :: [Instruction] -> TileState
+createTileState program =
+  TileState
+    { acc = 0,
+      bak = 0,
+      left = Nothing,
+      right = Nothing,
+      up = Nothing,
+      down = Nothing,
+      last = UP,
+      program = program,
+      pc = 0,
+      runState = Running
+    }
