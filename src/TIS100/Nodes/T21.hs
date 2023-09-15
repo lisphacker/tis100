@@ -1,6 +1,6 @@
-module TIS100.CPU.T21 where
+module TIS100.Nodes.T21 where
 
-import TIS100.CPU.Base (Value (..))
+import TIS100.Nodes.Base (Value (..))
 import Prelude hiding (last)
 
 data Register' = ACC | NIL
@@ -35,7 +35,7 @@ data Instruction
   deriving (Eq, Show)
 
 data RunState
-  = Running
+  = Ready
   | WaitingOnRead Port'
   | WaitingOnWrite Port'
   deriving (Eq, Show)
@@ -48,23 +48,31 @@ data TileState = TileState
     up :: Maybe Value,
     down :: Maybe Value,
     last :: Port',
-    program :: [Instruction],
     pc :: Address,
     runState :: RunState
   }
   deriving (Eq, Show)
 
-createTileState :: [Instruction] -> TileState
+data T21 = T21
+  { tileState :: TileState,
+    program :: [Instruction]
+  }
+  deriving (Eq, Show)
+
+createTileState :: [Instruction] -> T21
 createTileState program =
-  TileState
-    { acc = 0,
-      bak = 0,
-      left = Nothing,
-      right = Nothing,
-      up = Nothing,
-      down = Nothing,
-      last = UP,
-      program = program,
-      pc = 0,
-      runState = Running
+  T21
+    { tileState =
+        TileState
+          { acc = 0,
+            bak = 0,
+            left = Nothing,
+            right = Nothing,
+            up = Nothing,
+            down = Nothing,
+            last = UP,
+            pc = 0,
+            runState = Ready
+          },
+      program = program
     }
