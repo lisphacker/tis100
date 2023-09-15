@@ -15,6 +15,9 @@ data RegisterOrPort = Register Register' | Port Port'
 newtype Address = Address Int
   deriving (Eq, Show, Num)
 
+data JumpCondition = EZ | NZ | GZ | LZ
+  deriving (Eq, Show)
+
 data Instruction
   = MOVI Value RegisterOrPort
   | MOV RegisterOrPort RegisterOrPort
@@ -26,26 +29,15 @@ data Instruction
   | SUB RegisterOrPort
   | NEG
   | JMP Address
-  | JEZ Address
-  | JNZ Address
-  | JGZ Address
-  | JLZ Address
+  | JCC JumpCondition Address
   | JROI Value
   | JRO RegisterOrPort
   deriving (Eq, Show)
 
 data RunState
   = Running
-  | WaitingOnReadLeft
-  | WaitingOnReadRight
-  | WaitingOnReadUp
-  | WaitingOnReadDown
-  | WaitingOnReadAny
-  | WaitingOnWriteLeft
-  | WaitingOnWriteRight
-  | WaitingOnWriteUp
-  | WaitingOnWriteDown
-  | WaitingOnWriteAny
+  | WaitingOnRead Port'
+  | WaitingOnWrite Port'
   deriving (Eq, Show)
 
 data TileState = TileState
