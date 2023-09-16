@@ -67,6 +67,7 @@ executables:
     main: Main.hs
     dependencies:
     - tis100
+    - optparse-applicative
     ghc-options:
     - -rtsopts
     - -threaded

@@ -1,11 +1,17 @@
 {-# LANGUAGE QuasiQuotes #-}
+
 module Main where
 
-import Lib
-import Data.String.Interpolate (i)
+import CmdLine
+import Options.Applicative
 
 main :: IO ()
-main = do
-  let a = 1
-  let b = 2
-  putStrLn [i| Sum of #{a} and #{b} is #{sum' a b}|]
+main = greet =<< execParser opts
+  where
+    opts =
+      info
+        (sample <**> helper)
+        ( fullDesc
+            <> progDesc "Print a greeting for TARGET"
+            <> header "hello - a test for optparse-applicative"
+        )
