@@ -2,16 +2,7 @@
 
 module Main where
 
-import CmdLine
-import Options.Applicative
+import CmdLine (parseCmdLine)
 
 main :: IO ()
-main = greet =<< execParser opts
-  where
-    opts =
-      info
-        (sample <**> helper)
-        ( fullDesc
-            <> progDesc "Print a greeting for TARGET"
-            <> header "hello - a test for optparse-applicative"
-        )
+main = putStrLn <$> show =<< parseCmdLine

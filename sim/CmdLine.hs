@@ -2,27 +2,52 @@ module CmdLine where
 
 import Options.Applicative
 
--- import Data.String.Interpolate (i)
--- import TIS100
-
--- main :: IO ()
--- main = do
---   let a = 1
---   let b = 2
---   putStrLn [i| Sum of #{a} and #{b} is #{sum' a b}|]
+data Config
+  = ConfigcfgFileInput FilePath
+  | ConfigParamString String
+  deriving (Show)
 
 data CmdLineOpts = CmdLineOpts
-  { asmFilePath :: String
+  { asmFilePath :: String,
+    config :: Maybe Config
   }
+  deriving (Show)
+
+cfgFileInput :: Parser Config
+cfgFileInput =
+  ConfigcfgFileInput
+    <$> strOption
+      ( long "config"
+          <> short 'c'
+          <> metavar "CONFIG_FILE"
+          <> help "Config file"
+      )
+
+cfgcfgStringInput :: Parser Config
+cfgcfgStringInput =
+  ConfigParamString
+    <$> strOption
+      ( long "config-str"
+          <> metavar "CONFIG_STRING"
+          <> help "Config string"
+      )
 
 sample :: Parser CmdLineOpts
 sample =
   CmdLineOpts
     <$> strArgument
-      ( metavar "ASMFILE"
-          <> help "Assembly file name"
+      ( metavar "ASM_FILE"
+          <> help "Assembly file"
       )
+    <*> optional (cfgFileInput <|> cfgcfgStringInput)
 
-greet :: CmdLineOpts -> IO ()
-greet (CmdLineOpts asmFilePath) = putStrLn $ "asm: " ++ asmFilePath
-greet _ = return ()
+parseCmdLine :: IO CmdLineOpts
+parseCmdLine = execParser opts
+  where
+    opts =
+      info
+        (sample <**> helper)
+        ( fullDesc
+            <> progDesc "Runs a TIS-100 asssembly program on a simuated TIS-100 machine."
+            <> header "tissim - A TIS-100 simulator"
+        )
