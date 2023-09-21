@@ -3,7 +3,7 @@ module CmdLine where
 import Options.Applicative
 
 data Config
-  = ConfigcfgFileInput FilePath
+  = ConfigFileInput FilePath
   | ConfigParamString String
   deriving (Show)
 
@@ -15,7 +15,7 @@ data CmdLineOpts = CmdLineOpts
 
 cfgFileInput :: Parser Config
 cfgFileInput =
-  ConfigcfgFileInput
+  ConfigFileInput
     <$> strOption
       ( long "config"
           <> short 'c'
@@ -28,6 +28,7 @@ cfgcfgStringInput =
   ConfigParamString
     <$> strOption
       ( long "config-str"
+          <> short 's'
           <> metavar "CONFIG_STRING"
           <> help "Config string"
       )
