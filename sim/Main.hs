@@ -15,4 +15,10 @@ main = do
     Just (ConfigFileInput cfgFile) -> readFile cfgFile
     Nothing -> return ""
 
+  cfg <- do
+    case parseConfig cfgStr of
+      Left err -> error $ show err
+      Right cfg' -> return cfg'
+  putStrLn $ show cfg
+
   return ()
