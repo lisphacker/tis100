@@ -1,9 +1,12 @@
 module TIS100.Parser.ConfigParser where
 
-import Control.Monad (replicateM)
+import Control.Monad (replicateM, void)
 import Data.IntMap qualified as IM
 import Data.Void (Void)
 import Debug.Trace (traceM)
+import GHC.IO.Handle (hGetContents)
+import System.FilePath (takeDirectory, (</>))
+import System.IO (stdin)
 import TIS100.Errors (TISError (..), TISErrorCode (TISParseError), TISErrorOr)
 import Text.Megaparsec (MonadParsec (eof, takeWhile1P, try), Parsec, anySingleBut, count, manyTill, oneOf, parse, some, (<|>))
 import Text.Megaparsec.Char (char, printChar, space, spaceChar, string)
@@ -53,7 +56,7 @@ parseRow n = do
 
 parseToken :: Parser String
 parseToken = do
-  manyTill printChar spaceChar
+  manyTill printChar (void spaceChar <|> eof)
 
 parseIOSource :: Parser IOSource
 parseIOSource = do
@@ -80,11 +83,12 @@ parseIODef = do
 parseIODefs :: IODef -> IODef -> Parser (IODef, IODef)
 parseIODefs inputs outputs =
   do
-    space
     try $ do
+      space
       eof
       return $ (inputs, outputs)
     <|> do
+      space
       (dir, n, iosrc) <- parseIODef
       parseIODefs (condInf n dir Input inputs iosrc) (condInf n dir Output outputs iosrc)
   where
@@ -109,3 +113,16 @@ parseConfig :: String -> TISErrorOr Config
 parseConfig cfgSrc = case parse cfgParser "tis100src" cfgSrc of
   Left err -> Left $ TISError TISParseError $ show err
   Right cfg -> Right cfg
+
+readExternalInputs :: FilePath -> Config -> IO Config
+readExternalInputs cfgPath config = do
+  inputs' <- mapM readExternalInput $ inputs config
+  return $ config {inputs = inputs'}
+  where
+    readExternalInput :: IOSource -> IO IOSource
+    readExternalInput (File path) = do
+      contents <- readFile $ takeDirectory cfgPath </> path
+      return $ List $ map read $ words contents
+    readExternalInput StdIO = do
+      List . map read . words <$> getContents
+    readExternalInput src = return src

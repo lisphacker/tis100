@@ -2,18 +2,18 @@ module CmdLine where
 
 import Options.Applicative
 
-data Config
+data ConfigSource
   = ConfigFileInput FilePath
   | ConfigParamString String
   deriving (Show)
 
 data CmdLineOpts = CmdLineOpts
   { asmFilePath :: String,
-    config :: Maybe Config
+    config :: ConfigSource
   }
   deriving (Show)
 
-cfgFileInput :: Parser Config
+cfgFileInput :: Parser ConfigSource
 cfgFileInput =
   ConfigFileInput
     <$> strOption
@@ -23,8 +23,8 @@ cfgFileInput =
           <> help "Config file"
       )
 
-cfgcfgStringInput :: Parser Config
-cfgcfgStringInput =
+cfgStringInput :: Parser ConfigSource
+cfgStringInput =
   ConfigParamString
     <$> strOption
       ( long "config-str"
@@ -40,7 +40,7 @@ sample =
       ( metavar "ASM_FILE"
           <> help "Assembly file"
       )
-    <*> optional (cfgFileInput <|> cfgcfgStringInput)
+    <*> (cfgFileInput <|> cfgStringInput)
 
 parseCmdLine :: IO CmdLineOpts
 parseCmdLine = execParser opts

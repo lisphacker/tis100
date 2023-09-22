@@ -54,6 +54,7 @@ default-extensions:
 dependencies:
 - name: base
 - containers
+- filepath
 - megaparsec
 - string-interpolate
 - vector
