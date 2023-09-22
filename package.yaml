@@ -32,6 +32,7 @@ default-extensions:
 # - FunctionalDependencies
 - GADTs
 - GeneralizedNewtypeDeriving
+- ImportQualifiedPost
 # - InstanceSigs
 # - KindSignatures
 - LambdaCase
@@ -52,6 +53,7 @@ default-extensions:
 
 dependencies:
 - name: base
+- containers
 - megaparsec
 - string-interpolate
 - vector
