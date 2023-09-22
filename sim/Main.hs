@@ -1,10 +1,9 @@
-{-# LANGUAGE QuasiQuotes #-}
-
 module Main where
 
 import CmdLine (CmdLineOpts (..), ConfigSource (..), parseCmdLine)
+import TIS100.Nodes.Config (Config)
 import TIS100.Parser.AsmParser (AsmSource, parseAsm)
-import TIS100.Parser.ConfigParser (Config (..), parseConfig, readExternalInputs)
+import TIS100.Parser.ConfigParser (parseConfig, readExternalInputs)
 
 readConfig :: CmdLineOpts -> IO Config
 readConfig cmdLineOpts = do
@@ -16,10 +15,9 @@ readConfig cmdLineOpts = do
     case parseConfig cfgStr of
       Left err -> error $ show err
       Right cfg' -> return cfg'
-  cfg <- case config cmdLineOpts of
+  case config cmdLineOpts of
     ConfigFileInput cfgFile -> readExternalInputs cfgFile cfg
     _ -> readExternalInputs "" cfg
-  return cfg
 
 readAsm :: CmdLineOpts -> IO AsmSource
 readAsm cmdLineOpts = do
@@ -37,6 +35,6 @@ main = do
   -- putStrLn $ show cfg
 
   asm <- readAsm cmdLineOpts
-  putStrLn $ show asm
+  print asm
 
   return ()

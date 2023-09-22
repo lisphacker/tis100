@@ -8,26 +8,10 @@ import GHC.IO.Handle (hGetContents)
 import System.FilePath (takeDirectory, (</>))
 import System.IO (stdin)
 import TIS100.Errors (TISError (..), TISErrorCode (TISParseError), TISErrorOr)
+import TIS100.Nodes.Config (Config (..), IODef, IOSource (..), NodeType (..))
 import TIS100.Parser.Base (Parser, parseInt, parseToken)
 import Text.Megaparsec (MonadParsec (eof, takeWhile1P, try), Parsec, anySingleBut, count, manyTill, oneOf, parse, some, (<|>))
 import Text.Megaparsec.Char (char, printChar, space, spaceChar, string)
-
-data NodeType = Conpute | Stack | Disabled
-  deriving (Eq, Show)
-
-data IOSource = StdIO | List [Int] | File FilePath
-  deriving (Eq, Show)
-
-type IODef = IM.IntMap IOSource
-
-data Config = Config
-  { rows :: Int,
-    cols :: Int,
-    nodes :: [[NodeType]],
-    inputs :: IODef,
-    outputs :: IODef
-  }
-  deriving (Eq, Show)
 
 data Direction = Input | Output
   deriving (Eq, Show)
