@@ -8,10 +8,9 @@ import GHC.IO.Handle (hGetContents)
 import System.FilePath (takeDirectory, (</>))
 import System.IO (stdin)
 import TIS100.Errors (TISError (..), TISErrorCode (TISParseError), TISErrorOr)
+import TIS100.Parser.Base (Parser, parseInt, parseToken)
 import Text.Megaparsec (MonadParsec (eof, takeWhile1P, try), Parsec, anySingleBut, count, manyTill, oneOf, parse, some, (<|>))
 import Text.Megaparsec.Char (char, printChar, space, spaceChar, string)
-
-type Parser = Parsec Void String
 
 data NodeType = Conpute | Stack | Disabled
   deriving (Eq, Show)
@@ -33,15 +32,10 @@ data Config = Config
 data Direction = Input | Output
   deriving (Eq, Show)
 
-intParser :: Parser Int
-intParser = do
-  n <- some $ oneOf ['0' .. '9']
-  return $ read n
-
-intListParser :: Parser [Int]
-intListParser = do
+parseIntList :: Parser [Int]
+parseIntList = do
   some $ do
-    n <- intParser
+    n <- parseInt
     space
     return n
 
@@ -54,10 +48,6 @@ parseRow n = do
     parseNodeType 'S' = Stack
     parseNodeType 'D' = Disabled
 
-parseToken :: Parser String
-parseToken = do
-  manyTill printChar (void spaceChar <|> eof)
-
 parseIOSource :: Parser IOSource
 parseIOSource = do
   space
@@ -68,7 +58,7 @@ parseIOSource = do
   case srcType of
     "STDIN" -> return StdIO
     "STDOUT" -> return StdIO
-    "-" -> List <$> intListParser
+    "-" -> List <$> parseIntList
     "FILE" -> File <$> parseToken
     _ -> fail $ "Unknown IO source type: " ++ srcType
 
@@ -76,7 +66,7 @@ parseIODef :: Parser (Direction, Int, IOSource)
 parseIODef = do
   space
   dir <- (\x -> if x == 'I' then Input else Output) <$> oneOf ['I', 'O']
-  n <- intParser
+  n <- parseInt
   src <- parseIOSource
   return (dir, n, src)
 
@@ -97,9 +87,9 @@ parseIODefs inputs outputs =
 
 cfgParser :: Parser Config
 cfgParser = do
-  rows <- intParser
+  rows <- parseInt
   space
-  cols <- intParser
+  cols <- parseInt
   space
   nodes <- replicateM rows $ do
     nodesRow <- parseRow cols
@@ -110,7 +100,7 @@ cfgParser = do
   return $ Config rows cols nodes inputs outputs
 
 parseConfig :: String -> TISErrorOr Config
-parseConfig cfgSrc = case parse cfgParser "tis100src" cfgSrc of
+parseConfig cfgSrc = case parse cfgParser "tis100cfg" cfgSrc of
   Left err -> Left $ TISError TISParseError $ show err
   Right cfg -> Right cfg
 
