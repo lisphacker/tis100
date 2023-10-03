@@ -145,12 +145,12 @@ parseNodeAsm = do
   space
   labelsOrInstructions <- sepEndBy (try parseLabelOrInstruction') $ try endOfNodeProgram
   return (n, NodeAsmSource labelsOrInstructions)
-  where
-    parseLabelOrInstruction' = do
-      li <- parseLabelOrInstruction
-      void space <|> eof
-      return li
-    endOfNodeProgram = void space <|> void (char '@') <|> eof
+ where
+  parseLabelOrInstruction' = do
+    li <- parseLabelOrInstruction
+    void space <|> eof
+    return li
+  endOfNodeProgram = void space <|> void (char '@') <|> eof
 
 parseAllAsm :: AsmSource -> Parser AsmSource
 parseAllAsm nodeSources = do

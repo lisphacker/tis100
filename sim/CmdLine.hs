@@ -8,8 +8,8 @@ data ConfigSource
   deriving (Show)
 
 data CmdLineOpts = CmdLineOpts
-  { asmFilePath :: String,
-    config :: ConfigSource
+  { asmFilePath :: String
+  , config :: ConfigSource
   }
   deriving (Show)
 
@@ -44,11 +44,11 @@ sample =
 
 parseCmdLine :: IO CmdLineOpts
 parseCmdLine = execParser opts
-  where
-    opts =
-      info
-        (sample <**> helper)
-        ( fullDesc
-            <> progDesc "Runs a TIS-100 asssembly program on a simuated TIS-100 machine."
-            <> header "tissim - A TIS-100 simulator"
-        )
+ where
+  opts =
+    info
+      (sample <**> helper)
+      ( fullDesc
+          <> progDesc "Runs a TIS-100 asssembly program on a simuated TIS-100 machine."
+          <> header "tissim - A TIS-100 simulator"
+      )
