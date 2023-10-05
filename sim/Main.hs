@@ -1,8 +1,8 @@
 module Main where
 
 import CmdLine (CmdLineOpts (..), ConfigSource (..), parseCmdLine)
-import TIS100.Nodes.Config (Config)
 import TIS100.Parser.AsmParser (AsmSource, parseAsm)
+import TIS100.Parser.Config (Config)
 import TIS100.Parser.ConfigParser (parseConfig, readExternalInputs)
 
 readConfig :: CmdLineOpts -> IO Config
@@ -32,7 +32,7 @@ main = do
   cmdLineOpts <- parseCmdLine
 
   cfg <- readConfig cmdLineOpts
-  -- putStrLn $ show cfg
+  putStrLn $ show cfg
 
   asm <- readAsm cmdLineOpts
   print asm

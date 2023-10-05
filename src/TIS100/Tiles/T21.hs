@@ -1,6 +1,6 @@
-module TIS100.Nodes.T21 where
+module TIS100.Tiles.T21 where
 
-import TIS100.Nodes.Base (Value (..))
+import TIS100.Tiles.Base (Value (..))
 import Prelude hiding (last)
 
 data Register' = ACC | NIL
@@ -34,6 +34,8 @@ data Instruction
   | JRO RegisterOrPort
   deriving (Eq, Show)
 
+type TileProgram = [Instruction]
+
 data RunState
   = Ready
   | WaitingOnRead Port'
@@ -55,11 +57,11 @@ data TileState = TileState
 
 data T21 = T21
   { tileState :: TileState
-  , program :: [Instruction]
+  , program :: TileProgram
   }
   deriving (Eq, Show)
 
-createTileState :: [Instruction] -> T21
+createTileState :: TileProgram -> T21
 createTileState program =
   T21
     { tileState =

@@ -1,4 +1,4 @@
-module TIS100.Nodes.Base where
+module TIS100.Tiles.Base where
 
 newtype Value = Value Int
   deriving (Eq)

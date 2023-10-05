@@ -1,4 +1,4 @@
-module TIS100.Nodes.Config where
+module TIS100.Parser.Config where
 
 import Data.IntMap qualified as IM
 
