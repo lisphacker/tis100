@@ -1,7 +1,6 @@
 module TIS100.Parser.AsmParser where
 
 import Control.Monad (void)
-import Data.Graph (Tree (Node))
 import Data.IntMap qualified as IM
 import Debug.Trace (trace, traceM)
 import TIS100.Errors (TISError (..), TISErrorCode (..), TISErrorOr)
@@ -32,10 +31,10 @@ data LabelOrInstruction
   | JRO RegisterOrConstant
   deriving (Eq, Show)
 
-newtype NodeAsmSource = NodeAsmSource [LabelOrInstruction]
+newtype TileAsmSource = TileAsmSource [LabelOrInstruction]
   deriving (Eq, Show)
 
-type AsmSource = IM.IntMap NodeAsmSource
+type AsmSource = IM.IntMap TileAsmSource
 
 parseLabel :: Parser String
 parseLabel = some alphaNumChar
@@ -138,23 +137,23 @@ parseInstruction = try parseNOP <|> try parseMOV <|> try parseSWP <|> try parseS
 parseLabelOrInstruction :: Parser LabelOrInstruction
 parseLabelOrInstruction = try parseLabelDef <|> try parseInstruction
 
-parseNodeAsm :: Parser (Int, NodeAsmSource)
-parseNodeAsm = do
+parseTileAsm :: Parser (Int, TileAsmSource)
+parseTileAsm = do
   char '@'
   n <- parseInt
   space
-  labelsOrInstructions <- sepEndBy (try parseLabelOrInstruction') $ try endOfNodeProgram
-  return (n, NodeAsmSource labelsOrInstructions)
+  labelsOrInstructions <- sepEndBy (try parseLabelOrInstruction') $ try endOfTileProgram
+  return (n, TileAsmSource labelsOrInstructions)
  where
   parseLabelOrInstruction' = do
     li <- parseLabelOrInstruction
     void space <|> eof
     return li
-  endOfNodeProgram = void space <|> void (char '@') <|> eof
+  endOfTileProgram = void space <|> void (char '@') <|> eof
 
 parseAllAsm :: AsmSource -> Parser AsmSource
-parseAllAsm nodeSources = do
-  sources <- sepBy parseNodeAsm space
+parseAllAsm tileSources = do
+  sources <- sepBy parseTileAsm space
   return $ IM.fromList sources
 
 parseAsm :: String -> TISErrorOr AsmSource

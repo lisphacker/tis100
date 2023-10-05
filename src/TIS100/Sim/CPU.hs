@@ -1,44 +1,61 @@
 module TIS100.Sim.CPU where
 
-import Data.Vector.Mutable
+import Data.Vector qualified as V
+import Data.Vector.Mutable qualified as MV
 import TIS100.Parser.AsmParser (AsmSource)
-import TIS100.Parser.Config
+import TIS100.Parser.Config qualified as C
 import TIS100.Sim.ConnectedTile (ConnectedTile (..))
-import TIS100.Tiles.T21 (T21 (..))
-import TIS100.Tiles.T30 (T30 (..))
+import TIS100.Tiles.T21 qualified as T21
+import TIS100.Tiles.T30 qualified as T30
+
+-- data TileType = Undefined | T21 | T30
+--   deriving (Eq, Show)
 
 data Tile = Tile
   { pos :: (Int, Int)
-  , node :: ConnectedTile
+  , -- , typ :: TileType
+    connTile :: ConnectedTile
   }
 
--- deriving (Eq, Show)
-
-data CPUState m = CPUState
+data CPUState = CPUState
   { rows :: Int
   , cols :: Int
-  , tiles :: MVector m Tile
+  , tiles :: V.Vector Tile
   }
 
--- deriving (Eq, Show)
+createInitialCPUState :: C.Config -> AsmSource -> CPUState
+createInitialCPUState cfg asm =
+  let rows = C.rows cfg
+      cols = C.cols cfg
+      numTiles = rows * cols
+      tileTypes = concat $ C.tiles cfg
+   in CPUState rows cols $ V.fromList $ zipWith createTile [0 ..] tileTypes
+ where
+  createTile :: Int -> C.TileType -> Tile
+  createTile i tileType =
+    let pos = i `divMod` C.cols cfg
+     in case tileType of
+          C.Conpute -> Tile pos $ ConnectedTile $ T21.createTileState []
+          C.Stack -> Tile pos $ ConnectedTile $ T30.T30 []
+          C.Disabled -> Tile pos $ ConnectedTile $ T21.createTileState []
 
 {-
-createInitialState :: (Monad m) => Config -> AsmSource -> m (CPUState m)
+
+createInitialState :: (Monad m) => C.Config -> AsmSource -> m (CPUState (m ()))
 createInitialState cfg asm = do
-  let rows = rows cfg
-  let cols = cols cfg
-  let nodesTypes = nodes cfg
+  let rows = C.rows cfg
+  let cols = C.cols cfg
+  let numTiles = rows * cols
+  let tileTypes = concat $ C.tiles cfg
 
-  mapM createNodeRow nodesTypes
+  tileVector <- MV.generate numTiles $ createTile tileTypes
+  return $ CPUState rows cols tileVector
  where
-  createNodeRow :: (Monad m) => [NodeType] -> m (NodeRow m)
-  createNodeRow nodeTypes' = do
-    mapM createNode nodeTypes'
-
-  createNode :: (Monad m) => NodeType -> m Node
-  createNode nodeType = do
-    case nodeType of
-      Conpute -> return $ Node21 $ T21 asm
-      Stack -> return $ Node30 $ T30
-      Disabled -> return InactiveNode
+  createTile :: [C.TileType] -> Int -> Tile
+  createTile tileTypes i =
+    let tileType = tileTypes !! i
+     in case tileType of
+          C.Conpute -> Tile (0, 0) $ ConnectedTile $ T21
+          C.Stack -> Tile (0, 0) $ ConnectedTile $ T30
+          C.Disabled -> Tile (0, 0) $ ConnectedTile $ T21
 -}

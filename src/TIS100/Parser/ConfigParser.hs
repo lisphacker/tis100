@@ -8,7 +8,7 @@ import GHC.IO.Handle (hGetContents)
 import System.FilePath (takeDirectory, (</>))
 import System.IO (stdin)
 import TIS100.Errors (TISError (..), TISErrorCode (TISParseError), TISErrorOr)
-import TIS100.Parser.Config (Config (..), IODef, IOSource (..), NodeType (..))
+import TIS100.Parser.Config (Config (..), IODef, IOSource (..), TileType (..))
 import TIS100.Parser.Base (Parser, parseInt, parseToken)
 import Text.Megaparsec (MonadParsec (eof, takeWhile1P, try), Parsec, anySingleBut, count, manyTill, oneOf, parse, some, (<|>))
 import Text.Megaparsec.Char (char, printChar, space, spaceChar, string)
@@ -23,14 +23,14 @@ parseIntList = do
     space
     return n
 
-parseRow :: Int -> Parser [NodeType]
+parseRow :: Int -> Parser [TileType]
 parseRow n = do
   nodes <- count n $ oneOf ['C', 'S', 'D']
-  return $ map parseNodeType nodes
+  return $ map parseTileType nodes
  where
-  parseNodeType 'C' = Conpute
-  parseNodeType 'S' = Stack
-  parseNodeType 'D' = Disabled
+  parseTileType 'C' = Conpute
+  parseTileType 'S' = Stack
+  parseTileType 'D' = Disabled
 
 parseIOSource :: Parser IOSource
 parseIOSource = do
@@ -75,13 +75,13 @@ cfgParser = do
   space
   cols <- parseInt
   space
-  nodes <- replicateM rows $ do
-    nodesRow <- parseRow cols
+  tiles <- replicateM rows $ do
+    tilesRow <- parseRow cols
     space
-    return nodesRow
+    return tilesRow
   space
   (inputs, outputs) <- parseIODefs IM.empty IM.empty
-  return $ Config rows cols nodes inputs outputs
+  return $ Config rows cols tiles inputs outputs
 
 parseConfig :: String -> TISErrorOr Config
 parseConfig cfgSrc = case parse cfgParser "tis100cfg" cfgSrc of
