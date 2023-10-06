@@ -31,8 +31,7 @@ data LabelOrInstruction
   | JRO RegisterOrConstant
   deriving (Eq, Show)
 
-newtype TileAsmSource = TileAsmSource [LabelOrInstruction]
-  deriving (Eq, Show)
+type TileAsmSource = [LabelOrInstruction]
 
 type AsmSource = IM.IntMap TileAsmSource
 
@@ -143,7 +142,7 @@ parseTileAsm = do
   n <- parseInt
   space
   labelsOrInstructions <- sepEndBy (try parseLabelOrInstruction') $ try endOfTileProgram
-  return (n, TileAsmSource labelsOrInstructions)
+  return (n, labelsOrInstructions)
  where
   parseLabelOrInstruction' = do
     li <- parseLabelOrInstruction

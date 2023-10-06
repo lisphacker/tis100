@@ -4,6 +4,7 @@ import CmdLine (CmdLineOpts (..), ConfigSource (..), parseCmdLine)
 import TIS100.Parser.AsmParser (AsmSource, parseAsm)
 import TIS100.Parser.Config (Config)
 import TIS100.Parser.ConfigParser (parseConfig, readExternalInputs)
+import TIS100.Sim.CPU (createInitialCPUState)
 
 readConfig :: CmdLineOpts -> IO Config
 readConfig cmdLineOpts = do
@@ -36,5 +37,8 @@ main = do
 
   asm <- readAsm cmdLineOpts
   print asm
+
+  let initialCPUState = createInitialCPUState cfg asm
+  print initialCPUState
 
   return ()

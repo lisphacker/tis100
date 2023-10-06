@@ -1,5 +1,6 @@
 module TIS100.Tiles.T21 where
 
+import TIS100.Parser.AsmParser (LabelOrInstruction (NOP))
 import TIS100.Tiles.Base (Value (..))
 import Prelude hiding (last)
 
@@ -19,7 +20,8 @@ data JumpCondition = EZ | NZ | GZ | LZ
   deriving (Eq, Show)
 
 data Instruction
-  = MOVI Value RegisterOrPort
+  = NOP
+  | MOVI Value RegisterOrPort
   | MOV RegisterOrPort RegisterOrPort
   | SWP
   | SAV

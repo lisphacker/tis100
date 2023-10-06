@@ -1,9 +1,10 @@
 module TIS100.Sim.ConnectedTile where
 
+import TIS100.Tiles.Inactive
 import TIS100.Tiles.T21
 import TIS100.Tiles.T30
 
-class IsConnectedTile t
+class (Show t) => IsConnectedTile t
 
 data ConnectedTile
   = forall t.
@@ -13,3 +14,8 @@ data ConnectedTile
 instance IsConnectedTile T21
 
 instance IsConnectedTile T30
+
+instance IsConnectedTile InactiveTile
+
+instance Show ConnectedTile where
+  show (ConnectedTile t) = show t
