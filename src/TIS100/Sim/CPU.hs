@@ -9,27 +9,31 @@ import Data.Vector.Mutable qualified as MV
 import TIS100.Errors (TISError (..), TISErrorCode (TISParseError), TISErrorOr)
 import TIS100.Parser.AsmParser qualified as AP
 import TIS100.Parser.Config qualified as C
-import TIS100.Sim.ConnectedTile (ConnectedTile (..))
 import TIS100.Tiles.Base qualified as Tiles
 import TIS100.Tiles.Inactive qualified as Inactive
 import TIS100.Tiles.T21 qualified as T21
 import TIS100.Tiles.T30 qualified as T30
 import Text.Read (Lexeme (String))
 
--- data TileType = Undefined | T21 | T30
---   deriving (Eq, Show)
+data Tile = T21' T21.T21 | T30' T30.T30 | Inactive' Inactive.InactiveTile
+  deriving (Eq, Show)
 
-data Tile = Tile
+data PositionedTile = PositionedTile
   { pos :: (Int, Int)
-  , -- , typ :: TileType
-    connTile :: ConnectedTile
+  , index :: Int
+  , tile :: Tile
   }
   deriving (Show)
 
-data CPUState = CPUState
+data CPUConfig = CPUConfig
   { rows :: Int
   , cols :: Int
-  , tiles :: V.Vector Tile
+  }
+  deriving (Eq, Show)
+
+data CPUState = CPUState
+  { cfg :: CPUConfig
+  , tiles :: V.Vector PositionedTile
   }
   deriving (Show)
 
@@ -39,15 +43,15 @@ createInitialCPUState cfg asm =
       cols = C.cols cfg
       numTiles = rows * cols
       tileTypes = concat $ C.tiles cfg
-   in (CPUState rows cols . V.fromList <$> zipWithM createTile [0 ..] tileTypes)
+   in (CPUState (CPUConfig rows cols) . V.fromList <$> zipWithM createTile [0 ..] tileTypes)
  where
-  createTile :: Int -> C.TileType -> TISErrorOr Tile
+  createTile :: Int -> C.TileType -> TISErrorOr PositionedTile
   createTile i tileType =
     let pos = i `divMod` C.cols cfg
      in case tileType of
-          C.Conpute -> Tile pos . ConnectedTile . T21.createTileState <$> getTileAsm i
-          C.Stack -> Right $ Tile pos $ ConnectedTile $ T30.T30 []
-          C.Disabled -> Right $ Tile pos $ ConnectedTile $ Inactive.InactiveTile
+          C.Conpute -> PositionedTile pos i . T21' . T21.createTileState <$> getTileAsm i
+          C.Stack -> Right $ PositionedTile pos i $ T30' $ T30.T30 []
+          C.Disabled -> Right $ PositionedTile pos i $ Inactive' $ Inactive.InactiveTile
 
   getTileAsm :: Int -> TISErrorOr T21.TileProgram
   getTileAsm i = case IM.lookup i asm of

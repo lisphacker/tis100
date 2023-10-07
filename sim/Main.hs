@@ -2,9 +2,10 @@ module Main where
 
 import CmdLine (CmdLineOpts (..), ConfigSource (..), parseCmdLine)
 import TIS100.Parser.AsmParser (AsmSource, parseAsm)
-import TIS100.Parser.Config (Config)
+import TIS100.Parser.Config (Config (..))
 import TIS100.Parser.ConfigParser (parseConfig, readExternalInputs)
 import TIS100.Sim.CPU (createInitialCPUState)
+import TIS100.Sim.Run (SimState (SimState), step)
 
 readConfig :: CmdLineOpts -> IO Config
 readConfig cmdLineOpts = do
@@ -33,12 +34,17 @@ main = do
   cmdLineOpts <- parseCmdLine
 
   cfg <- readConfig cmdLineOpts
-  putStrLn $ show cfg
+  print cfg
 
   asm <- readAsm cmdLineOpts
   print asm
 
   let initialCPUState = createInitialCPUState cfg asm
-  print initialCPUState
+
+  nextSimState <- case initialCPUState of
+    Left err -> error $ show err
+    Right cpuState -> step $ SimState cpuState (inputs cfg) (outputs cfg)
+
+  print nextSimState
 
   return ()
