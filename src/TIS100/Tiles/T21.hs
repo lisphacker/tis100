@@ -132,6 +132,16 @@ instance IsConnectedTile T21 where
     WaitingOnWrite p -> Just p
     _ -> Nothing
 
-  readValueFrom t p = (t, getPortVal p t)
+  readValueFrom t p = (t', getPortVal p t)
+   where
+    t' = case p of
+      ANY -> t
+      LAST -> t
+      LEFT -> t{tileState = (tileState t){left = Nothing}}
+      RIGHT -> t{tileState = (tileState t){right = Nothing}}
+      UP -> t{tileState = (tileState t){up = Nothing}}
+      DOWN -> t{tileState = (tileState t){down = Nothing}}
+
   writeValueTo t p v = setPortVal p v t
+
   step t = t
