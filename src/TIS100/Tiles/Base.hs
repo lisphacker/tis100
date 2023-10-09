@@ -16,3 +16,6 @@ instance Num Value where
   abs (Value a) = Value $ abs a
   signum (Value a) = Value $ signum a
   fromInteger = Value . clamp . fromInteger
+
+data Port' = ANY | LAST | LEFT | RIGHT | UP | DOWN
+  deriving (Eq, Show)

@@ -1,13 +1,11 @@
 module TIS100.Tiles.T21 where
 
 import TIS100.Parser.AsmParser (LabelOrInstruction (NOP))
-import TIS100.Tiles.Base (Value (..))
+import TIS100.Tiles.Base (Port' (..), Value (..))
+import TIS100.Tiles.ConnectedTile (ConnectedTile (..))
 import Prelude hiding (last)
 
 data Register' = ACC | NIL
-  deriving (Eq, Show)
-
-data Port' = ANY | LAST | LEFT | RIGHT | UP | DOWN
   deriving (Eq, Show)
 
 data RegisterOrPort = Register Register' | Port Port'
@@ -118,3 +116,8 @@ clearPortVal LEFT v t = t{tileState = (tileState t){left = Nothing}}
 clearPortVal RIGHT v t = t{tileState = (tileState t){right = Nothing}}
 clearPortVal UP v t = t{tileState = (tileState t){up = Nothing}}
 clearPortVal DOWN v t = t{tileState = (tileState t){down = Nothing}}
+
+instance ConnectedTile T21 where
+  readValueFrom t p = (t, getPortVal p t)
+  writeValueTo t p v = setPortVal p v t
+  step t = t
