@@ -1,8 +1,9 @@
 module TIS100.Tiles.T21 where
 
+import Data.Maybe (isJust, isNothing)
 import TIS100.Parser.AsmParser (LabelOrInstruction (NOP))
-import TIS100.Tiles.Base (Port' (..), Value (..))
-import TIS100.Tiles.ConnectedTile (ConnectedTile (..))
+import TIS100.Tiles.Base (Port' (..), RunState (..), Value (..))
+import TIS100.Tiles.ConnectedTile (ConnectedTile (..), IsConnectedTile (..))
 import Prelude hiding (last)
 
 data Register' = ACC | NIL
@@ -35,12 +36,6 @@ data Instruction
   deriving (Eq, Show)
 
 type TileProgram = [Instruction]
-
-data RunState
-  = Ready
-  | WaitingOnRead Port'
-  | WaitingOnWrite Port'
-  deriving (Eq, Show)
 
 data TileState = TileState
   { acc :: Value
@@ -85,14 +80,6 @@ getTileRunState = runState . tileState
 setTileRunState :: T21 -> RunState -> T21
 setTileRunState tile rs = tile{tileState = (tileState tile){runState = rs}}
 
-getOppositePort :: Port' -> Port'
-getOppositePort ANY = ANY
-getOppositePort LAST = LAST
-getOppositePort LEFT = RIGHT
-getOppositePort RIGHT = LEFT
-getOppositePort UP = DOWN
-getOppositePort DOWN = UP
-
 getPortVal :: Port' -> T21 -> Maybe Value
 -- getPortVal ANY t = getPortVal (last t) t
 -- getPortVal LAST t = getPortVal (last t) t
@@ -117,7 +104,34 @@ clearPortVal RIGHT v t = t{tileState = (tileState t){right = Nothing}}
 clearPortVal UP v t = t{tileState = (tileState t){up = Nothing}}
 clearPortVal DOWN v t = t{tileState = (tileState t){down = Nothing}}
 
-instance ConnectedTile T21 where
+instance IsConnectedTile T21 where
+  getRunState = getTileRunState
+  setRunState = setTileRunState
+
+  readable t p = case p of
+    ANY -> True
+    LAST -> True
+    LEFT -> isJust $ left $ tileState t
+    RIGHT -> isJust $ right $ tileState t
+    UP -> isJust $ up $ tileState t
+    DOWN -> isJust $ down $ tileState t
+
+  writable t p = case p of
+    ANY -> True
+    LAST -> True
+    LEFT -> isNothing $ left $ tileState t
+    RIGHT -> isNothing $ right $ tileState t
+    UP -> isNothing $ up $ tileState t
+    DOWN -> isNothing $ down $ tileState t
+
+  isWaitingOnRead t = case getTileRunState t of
+    WaitingOnRead p -> Just p
+    _ -> Nothing
+
+  isWaitingOnWrite t = case getTileRunState t of
+    WaitingOnWrite p -> Just p
+    _ -> Nothing
+
   readValueFrom t p = (t, getPortVal p t)
   writeValueTo t p v = setPortVal p v t
   step t = t

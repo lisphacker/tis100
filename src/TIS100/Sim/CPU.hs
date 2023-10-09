@@ -10,6 +10,7 @@ import TIS100.Errors (TISError (..), TISErrorCode (TISParseError), TISErrorOr)
 import TIS100.Parser.AsmParser qualified as AP
 import TIS100.Parser.Config qualified as C
 import TIS100.Tiles.Base qualified as Tiles
+import TIS100.Tiles.ConnectedTile (ConnectedTile (..))
 import TIS100.Tiles.Inactive qualified as Inactive
 import TIS100.Tiles.T21 qualified as T21
 import TIS100.Tiles.T30 qualified as T30
@@ -18,10 +19,23 @@ import Text.Read (Lexeme (String))
 data Tile = T21' T21.T21 | T30' T30.T30 | Inactive' Inactive.InactiveTile
   deriving (Eq, Show)
 
+-- instance ConnectedTile Tile where
+--   readValueFrom (T21' t) = (T21' t', v) where (t', v) = readVelueFrom t
+--   readValueFrom (T30' t) = (T30' t', v) where (t', v) = readVelueFrom t
+--   readValueFrom (Inactive' t) = (Inactive' t', v) where (t', v) = readVelueFrom t
+
+--   writeValueTo (T21' t) = T21' $ writeValueTo t
+--   writeValueTo (T30' t) = T30' $ writeValueTo t
+--   writeValueTo (Inactive' t) = Inactive' $ writeValueTo t
+
+--   step (T21' t) = T21' $ step t
+--   step (T30' t) = T30' $ step t
+--   step (Inactive' t) = Inactive' $ step t
+
 data PositionedTile = PositionedTile
   { pos :: (Int, Int)
   , index :: Int
-  , tile :: Tile
+  , tile :: ConnectedTile
   }
   deriving (Show)
 
@@ -49,9 +63,9 @@ createInitialCPUState cfg asm =
   createTile i tileType =
     let pos = i `divMod` C.cols cfg
      in case tileType of
-          C.Conpute -> PositionedTile pos i . T21' . T21.createTileState <$> getTileAsm i
-          C.Stack -> Right $ PositionedTile pos i $ T30' $ T30.T30 []
-          C.Disabled -> Right $ PositionedTile pos i $ Inactive' $ Inactive.InactiveTile
+          C.Conpute -> PositionedTile pos i . ConnectedTile . T21.createTileState <$> getTileAsm i
+          C.Stack -> Right $ PositionedTile pos i $ ConnectedTile $ T30.T30 []
+          C.Disabled -> Right $ PositionedTile pos i $ ConnectedTile $ Inactive.InactiveTile
 
   getTileAsm :: Int -> TISErrorOr T21.TileProgram
   getTileAsm i = case IM.lookup i asm of
@@ -95,9 +109,9 @@ createInitialCPUState cfg asm =
     resolveReg :: AP.Register -> T21.RegisterOrPort
     resolveReg AP.ACC = T21.Register T21.ACC
     resolveReg AP.NIL = T21.Register T21.NIL
-    resolveReg AP.LEFT = T21.Port T21.LEFT
-    resolveReg AP.RIGHT = T21.Port T21.RIGHT
-    resolveReg AP.UP = T21.Port T21.UP
-    resolveReg AP.DOWN = T21.Port T21.DOWN
-    resolveReg AP.ANY = T21.Port T21.ANY
-    resolveReg AP.LAST = T21.Port T21.LAST
+    resolveReg AP.LEFT = T21.Port Tiles.LEFT
+    resolveReg AP.RIGHT = T21.Port Tiles.RIGHT
+    resolveReg AP.UP = T21.Port Tiles.UP
+    resolveReg AP.DOWN = T21.Port Tiles.DOWN
+    resolveReg AP.ANY = T21.Port Tiles.ANY
+    resolveReg AP.LAST = T21.Port Tiles.LAST

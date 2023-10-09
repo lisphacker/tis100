@@ -17,5 +17,19 @@ instance Num Value where
   signum (Value a) = Value $ signum a
   fromInteger = Value . clamp . fromInteger
 
+data RunState
+  = Ready
+  | WaitingOnRead Port'
+  | WaitingOnWrite Port'
+  deriving (Eq, Show)
+
 data Port' = ANY | LAST | LEFT | RIGHT | UP | DOWN
   deriving (Eq, Show)
+
+getOppositePort :: Port' -> Port'
+getOppositePort ANY = ANY
+getOppositePort LAST = LAST
+getOppositePort LEFT = RIGHT
+getOppositePort RIGHT = LEFT
+getOppositePort UP = DOWN
+getOppositePort DOWN = UP
