@@ -30,12 +30,13 @@ instance IsConnectedTile ConnectedTile where
   getRunState (ConnectedTile t) = getRunState t
   setRunState (ConnectedTile t) rs = ConnectedTile $ setRunState t rs
 
-  readable (ConnectedTile t) p = readable t p
-  writable (ConnectedTile t) p = writable t p
+  readable (ConnectedTile t) = readable t
+  writable (ConnectedTile t) = writable t
 
   isWaitingOnRead (ConnectedTile t) = isWaitingOnRead t
   isWaitingOnWrite (ConnectedTile t) = isWaitingOnWrite t
 
   readValueFrom (ConnectedTile t) p = (ConnectedTile t', v) where (t', v) = readValueFrom t p
-
   writeValueTo (ConnectedTile t) p v = ConnectedTile $ writeValueTo t p v
+
+  step (ConnectedTile t) = ConnectedTile $ step t
