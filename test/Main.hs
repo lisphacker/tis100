@@ -7,7 +7,7 @@
 
 import TIS100
 import Test.Hspec
-import qualified Test.Tasty
+import Test.Tasty qualified
 import Test.Tasty.Hspec
 
 main :: IO ()
