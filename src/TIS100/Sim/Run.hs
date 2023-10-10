@@ -2,6 +2,7 @@ module TIS100.Sim.Run where
 
 import Control.Monad (foldM)
 import Control.Monad.ST
+import Data.IntMap qualified as IM
 import Data.Maybe (fromJust, fromMaybe)
 import Data.Vector qualified as MV
 import Data.Vector qualified as V
@@ -28,6 +29,21 @@ type RWTileVector = MV.MVector RealWorld CPU.PositionedTile
 runStep :: SimState -> IO SimState
 runStep = processComm >> stepTiles
 
+readInputValue :: Int -> CFG.IODef -> IO (Maybe Int, CFG.IODef)
+readInputValue ti iodef = case IM.lookup ti iodef of
+  Just (CFG.List (v : vs)) -> return (Just v, IM.insert ti (CFG.List vs) iodef)
+  Just (CFG.List []) -> return (Nothing, iodef)
+  Just (CFG.File fp) -> return (Nothing, iodef)
+  Just (CFG.StdIO) -> return (Nothing, iodef)
+  Nothing -> return (Nothing, iodef)
+
+writeOutputValue :: Int -> Int -> CFG.IODef -> IO CFG.IODef
+writeOutputValue ti v iodef = case IM.lookup ti iodef of
+  Just (CFG.List vs) -> return $ IM.insert ti (CFG.List (vs ++ [v])) iodef
+  Just (CFG.File fp) -> return $ iodef
+  Just (CFG.StdIO) -> return $ iodef
+  Nothing -> return $ iodef
+
 processComm :: SimState -> IO SimState
 processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles) ins outs) = do
   mtiles <- V.thaw tiles
@@ -44,8 +60,15 @@ processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles) ins outs) =
 
     case getRunState tile of
       Tiles.WaitingOnRead p -> do
-        if r == 0
-          then return (tiles, ins, outs)
+        if r == 0 && p == Tiles.UP
+          then do
+            (maybeV, ins') <- readInputValue i ins
+            case maybeV of
+              Just v -> do
+                let tile' = writeValueTo p (Tiles.Value v) tile
+                MV.write tiles i $ ptile{CPU.tile = tile'}
+                return (tiles, ins', outs)
+              Nothing -> return (tiles, ins', outs)
           else do
             let o = getOtherTile i p
             optile <- MV.read tiles o
@@ -60,8 +83,15 @@ processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles) ins outs) =
                 return (tiles, ins, outs)
               else return (tiles, ins, outs)
       Tiles.WaitingOnWrite p -> do
-        if r == rows - 1
-          then return (tiles, ins, outs)
+        if r == rows - 1 && p == Tiles.DOWN
+          then do
+            let (tile', maybeV) = readValueFrom p tile
+            case maybeV of
+              Just (Tiles.Value v) -> do
+                outs' <- writeOutputValue i v outs
+                MV.write tiles i $ ptile{CPU.tile = tile'}
+                return (tiles, ins, outs')
+              Nothing -> return (tiles, ins, outs)
           else do
             let o = getOtherTile i p
             optile <- MV.read tiles o
