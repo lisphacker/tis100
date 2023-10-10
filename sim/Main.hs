@@ -3,12 +3,13 @@ module Main where
 import CmdLine (CmdLineOpts (..), ConfigSource (..), parseCmdLine)
 import Control.Monad (foldM, replicateM)
 import Data.Either (fromRight)
-import qualified Data.Vector as V
+import Data.IntMap qualified as IM
+import Data.Vector qualified as V
 import TIS100.Parser.AsmParser (AsmSource, parseAsm)
 import TIS100.Parser.Config (Config (..))
 import TIS100.Parser.ConfigParser (parseConfig, readExternalInputs)
-import qualified TIS100.Sim.CPU as CPU
-import qualified TIS100.Sim.Run as Run
+import TIS100.Sim.CPU qualified as CPU
+import TIS100.Sim.Run qualified as Run
 
 readConfig :: CmdLineOpts -> IO Config
 readConfig cmdLineOpts = do
@@ -32,6 +33,15 @@ readAsm cmdLineOpts = do
     Left err -> error $ show err
     Right asm -> return asm
 
+runStep :: Run.SimState -> Int -> IO Run.SimState
+runStep s i = do
+  nextSimState <- Run.runStep s
+  print ""
+  print $ "Iteration " ++ show i
+  print $ "Before: " ++ show (V.head . CPU.tiles . Run.cpu $ s) ++ " " ++ show (IM.lookup 0 $ Run.inputs s)
+  print $ "After:  " ++ show (V.head . CPU.tiles . Run.cpu $ nextSimState) ++ " " ++ show (IM.lookup 0 $ Run.inputs s)
+  return nextSimState
+
 main :: IO ()
 main = do
   cmdLineOpts <- parseCmdLine
@@ -51,7 +61,7 @@ main = do
   nextSimState <- case initialCPUState of
     Left err -> error $ show err
     -- Right cpuState -> Run.SimState cpuState (inputs cfg) (outputs cfg) >>= (replicateM 20 . Run.runStep)
-    Right cpuState -> foldM (\s i -> Run.runStep s) (Run.SimState cpuState (inputs cfg) (outputs cfg)) [1 .. 20]
+    Right cpuState -> foldM runStep (Run.SimState cpuState (inputs cfg) (outputs cfg)) [1 .. 20]
 
   print ""
   print $ V.head . CPU.tiles . Run.cpu $ nextSimState
