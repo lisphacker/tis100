@@ -8,17 +8,17 @@ newtype T30 = T30 [Tiles.Value]
 
 instance IsConnectedTile T30 where
   getRunState _ = Tiles.Ready
-  setRunState t _ = t
+  setRunState _ t = t
 
-  readable (T30 []) _ = False
+  readable _ (T30 []) = False
   readable _ _ = True
   writable _ _ = True
 
   isWaitingOnRead _ = Just Tiles.ANY
   isWaitingOnWrite _ = Just Tiles.ANY
 
-  readValueFrom (T30 []) _ = (T30 [], Nothing)
-  readValueFrom (T30 (v : vs)) _ = (T30 vs, Just v)
-  writeValueTo (T30 vs) _ v = T30 (vs ++ [v])
+  readValueFrom _ (T30 []) = (T30 [], Nothing)
+  readValueFrom _ (T30 (v : vs)) = (T30 vs, Just v)
+  writeValueTo _ v (T30 vs) = T30 (vs ++ [v])
 
   step = id

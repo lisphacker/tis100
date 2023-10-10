@@ -1,7 +1,7 @@
 module TIS100.Tiles.Base where
 
 newtype Value = Value Int
-  deriving (Eq)
+  deriving (Eq, Ord)
 
 instance Show Value where
   show (Value v) = show v

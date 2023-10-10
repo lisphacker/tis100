@@ -16,7 +16,7 @@ instance IsConnectedTile InactiveTile where
   isWaitingOnRead _ = Just Tiles.ANY
   isWaitingOnWrite _ = Just Tiles.ANY
 
-  readValueFrom t _ = (t, Nothing)
-  writeValueTo t _ _ = t
+  readValueFrom _ t = (t, Nothing)
+  writeValueTo _ _ t = t
 
   step = id
