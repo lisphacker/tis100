@@ -27,12 +27,7 @@ data SimState = SimState
 type RWTileVector = MV.MVector RealWorld CPU.PositionedTile
 
 runStep :: SimState -> IO SimState
-runStep s = do
-  print "runStep"
-  -- return $ processComm s >> stepTiles
-  s' <- processComm s
-  s'' <- stepTiles s'
-  return s''
+runStep = processComm >> stepTiles
 
 readInputValue :: Int -> CFG.IODef -> IO (Maybe Int, CFG.IODef)
 readInputValue ti iodef = case IM.lookup ti iodef of

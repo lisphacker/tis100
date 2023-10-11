@@ -33,18 +33,9 @@ readAsm cmdLineOpts = do
     Left err -> error $ show err
     Right asm -> return asm
 
-runStep :: Run.SimState -> Int -> IO Run.SimState
-runStep s i = do
-  print ""
-  print ""
-  print ""
-  nextSimState <- Run.runStep s
-  print ""
-  return nextSimState
-
 loopUntilNoChange :: Int -> Run.SimState -> IO Run.SimState
 loopUntilNoChange i s = do
-  nextSimState <- runStep s 0
+  nextSimState <- Run.runStep s
   print $ "Iteration " ++ show i
   print $ "Before: "
   print $ "  " ++ show (V.head . CPU.tiles . Run.cpu $ s)
@@ -69,16 +60,9 @@ main = do
   print asm
 
   let initialCPUState = CPU.createInitialCPUState cfg asm
-
-  print ""
-  -- print initialCPUState
-  print $ V.head . CPU.tiles <$> initialCPUState
-
   finalSimState <- case initialCPUState of
     Left err -> error $ show err
-    -- Right cpuState -> Run.SimState cpuState (inputs cfg) (outputs cfg) >>= (replicateM 20 . Run.runStep)
     Right cpuState -> loopUntilNoChange 1 $ Run.SimState cpuState (inputs cfg) (outputs cfg)
-    -- foldM runStep (Run.SimState cpuState (inputs cfg) (outputs cfg)) [1 .. 20]
 
   print ""
   print "Final state"
