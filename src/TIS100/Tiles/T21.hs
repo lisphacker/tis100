@@ -85,21 +85,22 @@ setTileRunState rs tile = tile{tileState = (tileState tile){runState = rs}}
 
 getPortVal :: Port' -> T21 -> (T21, Maybe Value)
 getPortVal p t
-  | p == LEFT = getPortVal' left t{tileState = (tileState t){left = Nothing}}
-  | p == RIGHT = getPortVal' right t{tileState = (tileState t){right = Nothing}}
-  | p == UP = getPortVal' up t{tileState = (tileState t){up = Nothing}}
-  | p == DOWN = getPortVal' down t{tileState = (tileState t){down = Nothing}}
+  | p == LEFT = getPortVal' left t{tileState = (tileState t){left = Nothing, runState = rs}}
+  | p == RIGHT = getPortVal' right t{tileState = (tileState t){right = Nothing, runState = rs}}
+  | p == UP = getPortVal' up t{tileState = (tileState t){up = Nothing, runState = rs}}
+  | p == DOWN = getPortVal' down t{tileState = (tileState t){down = Nothing, runState = rs}}
     where getPortVal' f t' = case f $ tileState t of
             Just v -> (t', Just v)
             Nothing -> (t{tileState = (tileState t){runState = WaitingOnRead p}}, Nothing)
+          rs = if (runState . tileState) t == WaitingOnWrite p then Ready else (runState . tileState) t
 
 setPortVal :: Port' -> Value -> T21 -> T21
--- setPortVal ANY v t = setPortVal (last t) v t
--- setPortVal LAST v t = setPortVal (last t) v t
-setPortVal LEFT v t = t{tileState = (tileState t){left = Just v}}
-setPortVal RIGHT v t = t{tileState = (tileState t){right = Just v}}
-setPortVal UP v t = t{tileState = (tileState t){up = Just v}}
-setPortVal DOWN v t = t{tileState = (tileState t){down = Just v}}
+setPortVal p v t
+  | p == LEFT = t{tileState = (tileState t){left = Just v, runState = rs}}
+  | p == RIGHT = t{tileState = (tileState t){right = Just v, runState = rs}}
+  | p == UP = t{tileState = (tileState t){up = Just v, runState = rs}}
+  | p == DOWN  = t{tileState = (tileState t){down = Just v, runState = rs}}
+    where rs = if (runState . tileState) t == WaitingOnRead p then Ready else (runState . tileState) t
 
 clearPortVal :: Port' -> Value -> T21 -> T21
 -- clearPortVal ANY v t = clearPortVal (last t) v t

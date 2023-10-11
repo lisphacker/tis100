@@ -23,6 +23,9 @@ data ConnectedTile
     (IsConnectedTile t) =>
     ConnectedTile t
 
+instance Eq ConnectedTile where
+  (ConnectedTile t1) == (ConnectedTile t2) = getRunState t1 == getRunState t2
+
 instance Show ConnectedTile where
   show (ConnectedTile t) = show t
 

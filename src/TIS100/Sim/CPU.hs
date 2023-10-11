@@ -37,7 +37,7 @@ data PositionedTile = PositionedTile
   , index :: Int
   , tile :: ConnectedTile
   }
-  deriving (Show)
+  deriving (Eq, Show)
 
 data CPUConfig = CPUConfig
   { rows :: Int
@@ -49,7 +49,7 @@ data CPUState = CPUState
   { cfg :: CPUConfig
   , tiles :: V.Vector PositionedTile
   }
-  deriving (Show)
+  deriving (Eq, Show)
 
 createInitialCPUState :: C.Config -> AP.AsmSource -> TISErrorOr CPUState
 createInitialCPUState cfg asm =
