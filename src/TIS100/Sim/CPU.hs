@@ -19,25 +19,12 @@ import Text.Read (Lexeme (String))
 data Tile = T21' T21.T21 | T30' T30.T30 | Inactive' Inactive.InactiveTile
   deriving (Eq, Show)
 
--- instance ConnectedTile Tile where
---   readValueFrom (T21' t) = (T21' t', v) where (t', v) = readVelueFrom t
---   readValueFrom (T30' t) = (T30' t', v) where (t', v) = readVelueFrom t
---   readValueFrom (Inactive' t) = (Inactive' t', v) where (t', v) = readVelueFrom t
-
---   writeValueTo (T21' t) = T21' $ writeValueTo t
---   writeValueTo (T30' t) = T30' $ writeValueTo t
---   writeValueTo (Inactive' t) = Inactive' $ writeValueTo t
-
---   step (T21' t) = T21' $ step t
---   step (T30' t) = T30' $ step t
---   step (Inactive' t) = Inactive' $ step t
-
 data PositionedTile = PositionedTile
   { pos :: (Int, Int)
   , index :: Int
   , tile :: ConnectedTile
   }
-  deriving (Show)
+  deriving (Eq, Show)
 
 data CPUConfig = CPUConfig
   { rows :: Int
@@ -49,7 +36,7 @@ data CPUState = CPUState
   { cfg :: CPUConfig
   , tiles :: V.Vector PositionedTile
   }
-  deriving (Show)
+  deriving (Eq, Show)
 
 createInitialCPUState :: C.Config -> AP.AsmSource -> TISErrorOr CPUState
 createInitialCPUState cfg asm =
