@@ -16,5 +16,6 @@ data Config = Config
   , tiles :: [[TileType]]
   , inputs :: IODef
   , outputs :: IODef
+  , refOutputs :: IODef
   }
   deriving (Eq, Show)

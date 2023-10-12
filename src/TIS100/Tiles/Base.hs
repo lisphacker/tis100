@@ -4,7 +4,7 @@ newtype Value = Value Int
   deriving (Eq, Ord)
 
 instance Show Value where
-  show (Value v) = show v
+  show (Value v) = "<" ++ show v ++ ">"
 
 clamp :: Int -> Int
 clamp = max (-999) . min 999

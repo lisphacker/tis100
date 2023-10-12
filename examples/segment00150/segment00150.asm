@@ -1,5 +1,4 @@
 @0
-ADD 10
 MOV UP, DOWN
 @4
 MOV UP, DOWN

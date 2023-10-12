@@ -36,15 +36,19 @@ readAsm cmdLineOpts = do
 loopUntilNoChange :: Int -> Run.SimState -> IO Run.SimState
 loopUntilNoChange i s = do
   nextSimState <- Run.runStep s
-  print $ "Iteration " ++ show i
-  print $ "Before: "
-  print $ "  " ++ show (V.head . CPU.tiles . Run.cpu $ s)
-  print $ "  " ++ show (IM.lookup 0 $ Run.inputs s)
-  print $ "  " ++ show (IM.lookup 0 $ Run.outputs s)
-  print $ "After:  "
-  print $ "  " ++ show (V.head . CPU.tiles . Run.cpu $ nextSimState)
-  print $ "  " ++ show (IM.lookup 0 $ Run.inputs nextSimState)
-  print $ "  " ++ show (IM.lookup 0 $ Run.outputs nextSimState)
+  -- print $ "Iteration " ++ show i
+  -- print $ "Before: "
+  -- print $ "  " ++ show (V.head . CPU.tiles . Run.cpu $ s)
+  -- print $ "  " ++ show (((flip (V.!)) 4) . CPU.tiles . Run.cpu $ s)
+  -- print $ "  " ++ show (((flip (V.!)) 8) . CPU.tiles . Run.cpu $ s)
+  -- print $ "  IN:  " ++ show (IM.lookup 0 $ Run.inputs s)
+  -- print $ "  OUT: " ++ show (IM.lookup 0 $ Run.outputs s)
+  -- print $ "After:  "
+  -- print $ "  " ++ show (V.head . CPU.tiles . Run.cpu $ nextSimState)
+  -- print $ "  " ++ show (((flip (V.!)) 4) . CPU.tiles . Run.cpu $ nextSimState)
+  -- print $ "  " ++ show (((flip (V.!)) 8) . CPU.tiles . Run.cpu $ nextSimState)
+  -- print $ "  IN:  " ++ show (IM.lookup 0 $ Run.inputs nextSimState)
+  -- print $ "  OUT: " ++ show (IM.lookup 0 $ Run.outputs nextSimState)
   if nextSimState == s
     then return s
     else loopUntilNoChange (i + 1) nextSimState
@@ -67,4 +71,8 @@ main = do
   print ""
   print "Final state"
   print finalSimState
+  print "Ref Output"
+  print $ show $ refOutputs cfg
+  print "Test Output"
+  print $ show $ Run.outputs finalSimState
   return ()

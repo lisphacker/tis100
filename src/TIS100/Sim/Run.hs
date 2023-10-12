@@ -1,6 +1,6 @@
 module TIS100.Sim.Run where
 
-import Control.Monad (foldM)
+import Control.Monad
 import Control.Monad.ST
 import Data.IntMap qualified as IM
 import Data.Maybe (fromJust, fromMaybe)
@@ -27,32 +27,35 @@ data SimState = SimState
 type RWTileVector = MV.MVector RealWorld CPU.PositionedTile
 
 runStep :: SimState -> IO SimState
-runStep = processComm >> stepTiles
+runStep = processComm >=> stepTiles
 
 readInputValue :: Int -> CFG.IODef -> IO (Maybe Int, CFG.IODef)
 readInputValue ti iodef = case IM.lookup ti iodef of
   Just (CFG.List (v : vs)) -> return (Just v, IM.insert ti (CFG.List vs) iodef)
   Just (CFG.List []) -> return (Nothing, iodef)
-  Just (CFG.File fp) -> return (Nothing, iodef)
-  Just (CFG.StdIO) -> return (Nothing, iodef)
+  Just (CFG.File fp) -> error "Tile I/O using files is not yet implemented"
+  Just CFG.StdIO -> error "Tile I/O using StdIO is not yet implemented"
   Nothing -> return (Nothing, iodef)
 
 writeOutputValue :: Int -> Int -> CFG.IODef -> IO CFG.IODef
 writeOutputValue ti v iodef = case IM.lookup ti iodef of
   Just (CFG.List vs) -> return $ IM.insert ti (CFG.List (vs ++ [v])) iodef
-  Just (CFG.File fp) -> return $ iodef
-  Just (CFG.StdIO) -> return $ iodef
-  Nothing -> return $ iodef
+  Just (CFG.File fp) -> error "Tile I/O using files is not yet implemented"
+  Just CFG.StdIO -> error "Tile I/O using StdIO is not yet implemented"
+  Nothing -> return $ IM.insert ti (CFG.List [v]) iodef
 
 processComm :: SimState -> IO SimState
 processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles) ins outs) = do
   mtiles <- V.thaw tiles
   let nTiles = rows * cols
-  print $ "nTiles: " ++ show nTiles
-  (mtiles', ins', outs') <- foldM processTileComm (mtiles, ins, outs) [0 .. nTiles - 1]
+  (mtiles', ins', outs') <- foldM processTileComm' (mtiles, ins, outs) [0 .. nTiles - 1]
   tiles' <- V.freeze mtiles'
   return $ SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles') ins' outs'
  where
+  processTileComm' :: (RWTileVector, IODef, IODef) -> Int -> IO (RWTileVector, IODef, IODef)
+  processTileComm' (tiles, ins, outs) i = do
+    (tiles', ins', outs') <- processTileComm (tiles, ins, outs) i
+    return (tiles', ins', outs')
   processTileComm :: (RWTileVector, IODef, IODef) -> Int -> IO (RWTileVector, IODef, IODef)
   processTileComm (tiles, ins, outs) i = do
     ptile <- MV.read tiles i
@@ -64,7 +67,6 @@ processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles) ins outs) =
         if r == 0 && p == Tiles.UP
           then do
             (maybeV, ins') <- readInputValue c ins
-            print $ "Tile " ++ show i ++ " waiting on read: " ++ show maybeV
             case maybeV of
               Just v -> do
                 let tile' = writeValueTo p (Tiles.Value v) tile
@@ -88,7 +90,6 @@ processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles) ins outs) =
         if r == rows - 1 && p == Tiles.DOWN
           then do
             let (tile', maybeV) = readValueFrom p tile
-            print $ "Tile " ++ show i ++ " waiting on write: " ++ show maybeV
             case maybeV of
               Just (Tiles.Value v) -> do
                 outs' <- writeOutputValue c v outs

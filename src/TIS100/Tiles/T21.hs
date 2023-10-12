@@ -102,7 +102,10 @@ setPortVal p v t
   | p == UP = t{tileState = (tileState t){up = Just v, runState = rs}}
   | p == DOWN = t{tileState = (tileState t){down = Just v, runState = rs}}
  where
-  rs = if (runState . tileState) t == WaitingOnRead p then Ready else (runState . tileState) t
+  rs = case (runState . tileState) t of
+    WaitingOnRead p -> Ready
+    WaitingOnWrite p -> WaitingOnWrite p
+    Ready -> WaitingOnWrite p
 
 clearPortVal :: Port' -> Value -> T21 -> T21
 clearPortVal LEFT v t = t{tileState = (tileState t){left = Nothing}}

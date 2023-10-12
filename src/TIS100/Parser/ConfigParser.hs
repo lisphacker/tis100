@@ -8,8 +8,8 @@ import GHC.IO.Handle (hGetContents)
 import System.FilePath (takeDirectory, (</>))
 import System.IO (stdin)
 import TIS100.Errors (TISError (..), TISErrorCode (TISParseError), TISErrorOr)
-import TIS100.Parser.Config (Config (..), IODef, IOSource (..), TileType (..))
 import TIS100.Parser.Base (Parser, parseInt, parseToken)
+import TIS100.Parser.Config (Config (..), IODef, IOSource (..), TileType (..))
 import Text.Megaparsec (MonadParsec (eof, takeWhile1P, try), Parsec, anySingleBut, count, manyTill, oneOf, parse, some, (<|>))
 import Text.Megaparsec.Char (char, printChar, space, spaceChar, string)
 
@@ -80,8 +80,8 @@ cfgParser = do
     space
     return tilesRow
   space
-  (inputs, outputs) <- parseIODefs IM.empty IM.empty
-  return $ Config rows cols tiles inputs outputs
+  (inputs, refOutputs) <- parseIODefs IM.empty IM.empty
+  return $ Config rows cols tiles inputs IM.empty refOutputs
 
 parseConfig :: String -> TISErrorOr Config
 parseConfig cfgSrc = case parse cfgParser "tis100cfg" cfgSrc of
@@ -91,7 +91,8 @@ parseConfig cfgSrc = case parse cfgParser "tis100cfg" cfgSrc of
 readExternalInputs :: FilePath -> Config -> IO Config
 readExternalInputs cfgPath config = do
   inputs' <- mapM readExternalInput $ inputs config
-  return $ config{inputs = inputs'}
+  refOutputs' <- mapM readExternalInput $ refOutputs config
+  return $ config{inputs = inputs', refOutputs = refOutputs'}
  where
   readExternalInput :: IOSource -> IO IOSource
   readExternalInput (File path) = do
