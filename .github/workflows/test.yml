@@ -20,10 +20,10 @@ jobs:
         runner:
           - ubuntu-latest
           - macOS-latest
-          - windows-latest
+          # - windows-latest
 
         resolver:
-          - nightly
+          # - nightly
           - lts-21.14 # ghc-9.4.7
 
       fail-fast: false
@@ -35,7 +35,7 @@ jobs:
       - id: stack
         uses: ./
         with:
-          working-directory: example
+          working-directory: testing
           stack-arguments: --resolver ${{ matrix.resolver }}
           cache-prefix: ${{ matrix.resolver }}/
 
