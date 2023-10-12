@@ -22,9 +22,8 @@ jobs:
           - macOS-latest
           # - windows-latest
 
-        resolver:
-          # - nightly
-          - lts-21.14 # ghc-9.4.7
+        stack-yaml:
+          - stack.yaml
 
       fail-fast: false
 
