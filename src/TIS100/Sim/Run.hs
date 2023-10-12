@@ -26,6 +26,30 @@ data SimState = SimState
 
 type RWTileVector = MV.MVector RealWorld CPU.PositionedTile
 
+
+loopUntilNoChange :: Int -> SimState -> IO SimState
+loopUntilNoChange i s = do
+  nextSimState <- runStep s
+  -- print $ "Iteration " ++ show i
+  -- print $ "Before: "
+  -- print $ "  " ++ show (V.head . CPU.tiles . Run.cpu $ s)
+  -- print $ "  " ++ show (((flip (V.!)) 4) . CPU.tiles . Run.cpu $ s)
+  -- print $ "  " ++ show (((flip (V.!)) 8) . CPU.tiles . Run.cpu $ s)
+  -- print $ "  IN:  " ++ show (IM.lookup 0 $ Run.inputs s)
+  -- print $ "  OUT: " ++ show (IM.lookup 0 $ Run.outputs s)
+  -- print $ "After:  "
+  -- print $ "  " ++ show (V.head . CPU.tiles . Run.cpu $ nextSimState)
+  -- print $ "  " ++ show (((flip (V.!)) 4) . CPU.tiles . Run.cpu $ nextSimState)
+  -- print $ "  " ++ show (((flip (V.!)) 8) . CPU.tiles . Run.cpu $ nextSimState)
+  -- print $ "  IN:  " ++ show (IM.lookup 0 $ Run.inputs nextSimState)
+  -- print $ "  OUT: " ++ show (IM.lookup 0 $ Run.outputs nextSimState)
+  if nextSimState == s
+    then return s
+    else loopUntilNoChange (i + 1) nextSimState
+
+run :: SimState -> IO SimState
+run s = loopUntilNoChange 1 s
+
 runStep :: SimState -> IO SimState
 runStep = processComm >=> stepTiles
 

@@ -1,17 +1,8 @@
 module CmdLine where
 
+import TIS100.Sim.Config (ConfigSource (..), SimRunConfig (..))
+
 import Options.Applicative
-
-data ConfigSource
-  = ConfigFileInput FilePath
-  | ConfigParamString String
-  deriving (Show)
-
-data CmdLineOpts = CmdLineOpts
-  { asmFilePath :: String
-  , config :: ConfigSource
-  }
-  deriving (Show)
 
 cfgFileInput :: Parser ConfigSource
 cfgFileInput =
@@ -33,16 +24,16 @@ cfgStringInput =
           <> help "Config string"
       )
 
-sample :: Parser CmdLineOpts
+sample :: Parser SimRunConfig
 sample =
-  CmdLineOpts
+  SimRunConfig
     <$> strArgument
       ( metavar "ASM_FILE"
           <> help "Assembly file"
       )
     <*> (cfgFileInput <|> cfgStringInput)
 
-parseCmdLine :: IO CmdLineOpts
+parseCmdLine :: IO SimRunConfig
 parseCmdLine = execParser opts
  where
   opts =

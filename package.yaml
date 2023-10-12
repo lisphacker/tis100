@@ -68,7 +68,7 @@ library:
 # Runnable executable for our application
 executables:
   tissim:
-    source-dirs: sim
+    source-dirs: tissim
     main: Main.hs
     dependencies:
     - tis100
