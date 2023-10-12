@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: testing
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        runner:
+          - ubuntu-latest
+          - macOS-latest
+          # - windows-latest
+
+        resolver:
+          # - nightly
+          - lts-21.14 # ghc-9.4.7
+
+      fail-fast: false
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: freckle/stack-cache-action@main
+       with:
+          stack-yaml: ${{ matrix.stack-yaml }}
+       - uses: freckle/stack-action@main
+        with:
+          stack-yaml: ${{ matrix.stack-yaml }}
+ 
