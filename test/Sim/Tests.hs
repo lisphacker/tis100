@@ -4,7 +4,7 @@ import GHC.IO (unsafePerformIO)
 import TIS100.Parser.Config qualified as ParserCfg
 import TIS100.Parser.Util qualified as ParserUtil
 import TIS100.Sim.CPU qualified as CPU
-import TIS100.Sim.Config (ConfigSource (..), SimRunConfig (..))
+import TIS100.Sim.Config (ConfigSource (..), SimRunConfig (SimRunConfig))
 import TIS100.Sim.Run qualified as Run
 import Test.Hspec
 
