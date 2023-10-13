@@ -24,7 +24,7 @@ jobs:
       - uses: freckle/stack-cache-action@main
         with:
           stack-yaml: ${{ matrix.stack-yaml }}
-       - uses: freckle/stack-action@main
+      - uses: freckle/stack-action@main
         with:
           stack-yaml: ${{ matrix.stack-yaml }}
  
