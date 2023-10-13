@@ -1,3 +1,5 @@
+# From https://github.com/freckle/stack-action
+# https://tech.freckle.com/2021/05/18/haskell-on-actions/
 name: CI
 
 on:
