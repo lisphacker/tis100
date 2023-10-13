@@ -1,7 +1,7 @@
 module TIS100.Tiles.T30 where
 
 import TIS100.Tiles.Base qualified as Tiles
-import TIS100.Tiles.ConnectedTile (ConnectedTile (..), IsConnectedTile (..))
+import TIS100.Tiles.ConnectedTile (IsConnectedTile (..))
 
 newtype T30 = T30 [Tiles.Value]
   deriving (Eq, Show)

@@ -1,11 +1,9 @@
 module TIS100.Sim.CPU where
 
 import Control.Monad (zipWithM)
-import Control.Monad.RWS (MonadState (get))
 import Data.IntMap qualified as IM
 import Data.Map qualified as M
 import Data.Vector qualified as V
-import Data.Vector.Mutable qualified as MV
 import TIS100.Errors (TISError (..), TISErrorCode (TISParseError), TISErrorOr)
 import TIS100.Parser.AsmParser qualified as AP
 import TIS100.Parser.Config qualified as C
@@ -14,13 +12,12 @@ import TIS100.Tiles.ConnectedTile (ConnectedTile (..))
 import TIS100.Tiles.Inactive qualified as Inactive
 import TIS100.Tiles.T21 qualified as T21
 import TIS100.Tiles.T30 qualified as T30
-import Text.Read (Lexeme (String))
 
 data Tile = T21' T21.T21 | T30' T30.T30 | Inactive' Inactive.InactiveTile
   deriving (Eq, Show)
 
 data PositionedTile = PositionedTile
-  { pos :: (Int, Int)
+  { position :: (Int, Int)
   , index :: Int
   , tile :: ConnectedTile
   }
@@ -33,18 +30,15 @@ data CPUConfig = CPUConfig
   deriving (Eq, Show)
 
 data CPUState = CPUState
-  { cfg :: CPUConfig
+  { config :: CPUConfig
   , tiles :: V.Vector PositionedTile
   }
   deriving (Eq, Show)
 
 createInitialCPUState :: C.Config -> AP.AsmSource -> TISErrorOr CPUState
 createInitialCPUState cfg asm =
-  let rows = C.rows cfg
-      cols = C.cols cfg
-      numTiles = rows * cols
-      tileTypes = concat $ C.tiles cfg
-   in (CPUState (CPUConfig rows cols) . V.fromList <$> zipWithM createTile [0 ..] tileTypes)
+  let tileTypes = concat $ C.tiles cfg
+   in (CPUState (CPUConfig (C.rows cfg) (C.cols cfg)) . V.fromList <$> zipWithM createTile [0 ..] tileTypes)
  where
   createTile :: Int -> C.TileType -> TISErrorOr PositionedTile
   createTile i tileType =
@@ -59,46 +53,46 @@ createInitialCPUState cfg asm =
     Nothing -> Left $ TISError TISParseError $ "No tile asm forat index " ++ show i
     Just a -> resolveAsm a
 
-  resolveAsm :: AP.TileAsmSource -> TISErrorOr T21.TileProgram
-  resolveAsm asm = resolve (locateLabels asm 0 M.empty) asm V.empty
-   where
-    locateLabels :: AP.TileAsmSource -> Int -> M.Map String Int -> M.Map String Int
-    locateLabels [] _ m = m
-    locateLabels (AP.Label l : xs) pc m = locateLabels xs (pc + 1) (M.insert l pc m)
-    locateLabels (_ : xs) pc m = locateLabels xs (pc + 1) m
+resolveAsm :: AP.TileAsmSource -> TISErrorOr T21.TileProgram
+resolveAsm asm = resolve (locateLabels asm 0 M.empty) asm V.empty
+ where
+  locateLabels :: AP.TileAsmSource -> Int -> M.Map String Int -> M.Map String Int
+  locateLabels [] _ m = m
+  locateLabels (AP.Label l : xs) pc m = locateLabels xs (pc + 1) (M.insert l pc m)
+  locateLabels (_ : xs) pc m = locateLabels xs (pc + 1) m
 
-    resolve :: M.Map String Int -> AP.TileAsmSource -> T21.TileProgram -> TISErrorOr T21.TileProgram
-    resolve _ [] p = Right p
-    resolve m (AP.Label l : xs) p = resolve m xs p
-    resolve m (AP.NOP : xs) p = resolve m xs $ V.snoc p T21.NOP
-    resolve m (AP.MOV (AP.Register src) dst : xs) p = resolve m xs $ V.snoc p $ T21.MOV (resolveReg src) (resolveReg dst)
-    resolve m (AP.MOV (AP.Constant srci) dst : xs) p = resolve m xs $ V.snoc p $ T21.MOVI (Tiles.Value srci) (resolveReg dst)
-    resolve m (AP.SWP : xs) p = resolve m xs $ V.snoc p T21.SWP
-    resolve m (AP.SAV : xs) p = resolve m xs $ V.snoc p T21.SAV
-    resolve m (AP.ADD (AP.Register src) : xs) p = resolve m xs $ V.snoc p $ T21.ADD (resolveReg src)
-    resolve m (AP.ADD (AP.Constant srci) : xs) p = resolve m xs $ V.snoc p $ T21.ADDI (Tiles.Value srci)
-    resolve m (AP.SUB (AP.Register src) : xs) p = resolve m xs $ V.snoc p $ T21.SUB (resolveReg src)
-    resolve m (AP.SUB (AP.Constant srci) : xs) p = resolve m xs $ V.snoc p $ T21.SUBI (Tiles.Value srci)
-    resolve m (AP.NEG : xs) p = resolve m xs $ V.snoc p T21.NEG
-    resolve m (AP.JMP l : xs) p = resolveJump m xs p l $ T21.JMP
-    resolve m (AP.JEZ l : xs) p = resolveJump m xs p l $ T21.JCC T21.EZ
-    resolve m (AP.JNZ l : xs) p = resolveJump m xs p l $ T21.JCC T21.NZ
-    resolve m (AP.JGZ l : xs) p = resolveJump m xs p l $ T21.JCC T21.GZ
-    resolve m (AP.JLZ l : xs) p = resolveJump m xs p l $ T21.JCC T21.LZ
-    resolve m (AP.JRO (AP.Register src) : xs) p = resolve m xs $ V.snoc p $ T21.JRO (resolveReg src)
-    resolve m (AP.JRO (AP.Constant srci) : xs) p = resolve m xs $ V.snoc p $ T21.JROI (Tiles.Value srci)
+  resolve :: M.Map String Int -> AP.TileAsmSource -> T21.TileProgram -> TISErrorOr T21.TileProgram
+  resolve _ [] p = Right p
+  resolve m (AP.Label _ : xs) p = resolve m xs p
+  resolve m (AP.NOP : xs) p = resolve m xs $ V.snoc p T21.NOP
+  resolve m (AP.MOV (AP.Register src) dst : xs) p = resolve m xs $ V.snoc p $ T21.MOV (resolveReg src) (resolveReg dst)
+  resolve m (AP.MOV (AP.Constant srci) dst : xs) p = resolve m xs $ V.snoc p $ T21.MOVI (Tiles.Value srci) (resolveReg dst)
+  resolve m (AP.SWP : xs) p = resolve m xs $ V.snoc p T21.SWP
+  resolve m (AP.SAV : xs) p = resolve m xs $ V.snoc p T21.SAV
+  resolve m (AP.ADD (AP.Register src) : xs) p = resolve m xs $ V.snoc p $ T21.ADD (resolveReg src)
+  resolve m (AP.ADD (AP.Constant srci) : xs) p = resolve m xs $ V.snoc p $ T21.ADDI (Tiles.Value srci)
+  resolve m (AP.SUB (AP.Register src) : xs) p = resolve m xs $ V.snoc p $ T21.SUB (resolveReg src)
+  resolve m (AP.SUB (AP.Constant srci) : xs) p = resolve m xs $ V.snoc p $ T21.SUBI (Tiles.Value srci)
+  resolve m (AP.NEG : xs) p = resolve m xs $ V.snoc p T21.NEG
+  resolve m (AP.JMP l : xs) p = resolveJump m xs p l $ T21.JMP
+  resolve m (AP.JEZ l : xs) p = resolveJump m xs p l $ T21.JCC T21.EZ
+  resolve m (AP.JNZ l : xs) p = resolveJump m xs p l $ T21.JCC T21.NZ
+  resolve m (AP.JGZ l : xs) p = resolveJump m xs p l $ T21.JCC T21.GZ
+  resolve m (AP.JLZ l : xs) p = resolveJump m xs p l $ T21.JCC T21.LZ
+  resolve m (AP.JRO (AP.Register src) : xs) p = resolve m xs $ V.snoc p $ T21.JRO (resolveReg src)
+  resolve m (AP.JRO (AP.Constant srci) : xs) p = resolve m xs $ V.snoc p $ T21.JROI (Tiles.Value srci)
 
-    resolveJump :: M.Map String Int -> [AP.LabelOrInstruction] -> T21.TileProgram -> String -> (T21.Address -> T21.Instruction) -> TISErrorOr T21.TileProgram
-    resolveJump m xs p l ins = case M.lookup l m of
-      Nothing -> Left $ TISError TISParseError $ "Unknown label " ++ l
-      Just addr -> resolve m xs $ V.snoc p $ ins (T21.Address addr)
+  resolveJump :: M.Map String Int -> [AP.LabelOrInstruction] -> T21.TileProgram -> String -> (T21.Address -> T21.Instruction) -> TISErrorOr T21.TileProgram
+  resolveJump m xs p l ins = case M.lookup l m of
+    Nothing -> Left $ TISError TISParseError $ "Unknown label " ++ l
+    Just addr -> resolve m xs $ V.snoc p $ ins (T21.Address addr)
 
-    resolveReg :: AP.Register -> T21.RegisterOrPort
-    resolveReg AP.ACC = T21.Register T21.ACC
-    resolveReg AP.NIL = T21.Register T21.NIL
-    resolveReg AP.LEFT = T21.Port Tiles.LEFT
-    resolveReg AP.RIGHT = T21.Port Tiles.RIGHT
-    resolveReg AP.UP = T21.Port Tiles.UP
-    resolveReg AP.DOWN = T21.Port Tiles.DOWN
-    resolveReg AP.ANY = T21.Port Tiles.ANY
-    resolveReg AP.LAST = T21.Port Tiles.LAST
+  resolveReg :: AP.Register -> T21.RegisterOrPort
+  resolveReg AP.ACC = T21.Register T21.ACC
+  resolveReg AP.NIL = T21.Register T21.NIL
+  resolveReg AP.LEFT = T21.Port Tiles.LEFT
+  resolveReg AP.RIGHT = T21.Port Tiles.RIGHT
+  resolveReg AP.UP = T21.Port Tiles.UP
+  resolveReg AP.DOWN = T21.Port Tiles.DOWN
+  resolveReg AP.ANY = T21.Port Tiles.ANY
+  resolveReg AP.LAST = T21.Port Tiles.LAST

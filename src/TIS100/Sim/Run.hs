@@ -3,19 +3,15 @@ module TIS100.Sim.Run where
 import Control.Monad
 import Control.Monad.ST
 import Data.IntMap qualified as IM
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromJust)
 import Data.Vector qualified as MV
 import Data.Vector qualified as V
 import Data.Vector.Mutable qualified as MV
-import Foreign qualified as V
 import TIS100.Parser.Config (IODef)
 import TIS100.Parser.Config qualified as CFG
 import TIS100.Sim.CPU qualified as CPU
 import TIS100.Tiles.Base qualified as Tiles
-import TIS100.Tiles.ConnectedTile (ConnectedTile (..), IsConnectedTile (..))
-import TIS100.Tiles.Inactive qualified as Inactive
-import TIS100.Tiles.T21 qualified as T21
-import TIS100.Tiles.T30 qualified as T30
+import TIS100.Tiles.ConnectedTile (IsConnectedTile (..))
 
 data SimState = SimState
   { cpu :: CPU.CPUState
@@ -25,7 +21,6 @@ data SimState = SimState
   deriving (Eq, Show)
 
 type RWTileVector = MV.MVector RealWorld CPU.PositionedTile
-
 
 loopUntilNoChange :: Int -> SimState -> IO SimState
 loopUntilNoChange i s = do
@@ -57,22 +52,22 @@ readInputValue :: Int -> CFG.IODef -> IO (Maybe Int, CFG.IODef)
 readInputValue ti iodef = case IM.lookup ti iodef of
   Just (CFG.List (v : vs)) -> return (Just v, IM.insert ti (CFG.List vs) iodef)
   Just (CFG.List []) -> return (Nothing, iodef)
-  Just (CFG.File fp) -> error "Tile I/O using files is not yet implemented"
+  Just (CFG.File _) -> error "Tile I/O using files is not yet implemented"
   Just CFG.StdIO -> error "Tile I/O using StdIO is not yet implemented"
   Nothing -> return (Nothing, iodef)
 
 writeOutputValue :: Int -> Int -> CFG.IODef -> IO CFG.IODef
 writeOutputValue ti v iodef = case IM.lookup ti iodef of
   Just (CFG.List vs) -> return $ IM.insert ti (CFG.List (vs ++ [v])) iodef
-  Just (CFG.File fp) -> error "Tile I/O using files is not yet implemented"
+  Just (CFG.File _) -> error "Tile I/O using files is not yet implemented"
   Just CFG.StdIO -> error "Tile I/O using StdIO is not yet implemented"
   Nothing -> return $ IM.insert ti (CFG.List [v]) iodef
 
 processComm :: SimState -> IO SimState
-processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles) ins outs) = do
-  mtiles <- V.thaw tiles
+processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles_) ins_ outs_) = do
+  mtiles <- V.thaw tiles_
   let nTiles = rows * cols
-  (mtiles', ins', outs') <- foldM processTileComm' (mtiles, ins, outs) [0 .. nTiles - 1]
+  (mtiles', ins', outs') <- foldM processTileComm' (mtiles, ins_, outs_) [0 .. nTiles - 1]
   tiles' <- V.freeze mtiles'
   return $ SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles') ins' outs'
  where
@@ -84,7 +79,7 @@ processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles) ins outs) =
   processTileComm (tiles, ins, outs) i = do
     ptile <- MV.read tiles i
     let tile = CPU.tile ptile
-    let (r, c) = CPU.pos ptile
+    let (r, c) = CPU.position ptile
 
     case getRunState tile of
       Tiles.WaitingOnRead p -> do
@@ -148,15 +143,15 @@ stepTiles :: SimState -> IO SimState
 stepTiles (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles) ins outs) = do
   mtiles <- V.thaw tiles
   let nTiles = rows * cols
-  (mtiles', ins', outs') <- foldM stepTile (mtiles, ins, outs) [0 .. nTiles - 1]
+  mtiles' <- foldM stepTile mtiles [0 .. nTiles - 1]
   tiles' <- V.freeze mtiles'
-  return $ SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles') ins' outs'
+  return $ SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles') ins outs
  where
-  stepTile :: (RWTileVector, IODef, IODef) -> Int -> IO (RWTileVector, IODef, IODef)
-  stepTile (tiles, ins, outs) i = do
-    ptile <- MV.read tiles i
+  stepTile :: RWTileVector -> Int -> IO RWTileVector
+  stepTile tiles_ i = do
+    ptile <- MV.read tiles_ i
     let tile = CPU.tile ptile
     let tile' = step tile
     let ptile' = ptile{CPU.tile = tile'}
-    MV.write tiles i ptile'
-    return $ (tiles, ins, outs)
+    MV.write tiles_ i ptile'
+    return tiles_

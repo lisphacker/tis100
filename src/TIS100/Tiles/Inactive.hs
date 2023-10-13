@@ -1,7 +1,7 @@
 module TIS100.Tiles.Inactive where
 
 import TIS100.Tiles.Base qualified as Tiles
-import TIS100.Tiles.ConnectedTile (ConnectedTile (..), IsConnectedTile (..))
+import TIS100.Tiles.ConnectedTile (IsConnectedTile (..))
 
 data InactiveTile = InactiveTile
   deriving (Eq, Show)

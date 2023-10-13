@@ -2,10 +2,9 @@ module TIS100.Parser.AsmParser where
 
 import Control.Monad (void)
 import Data.IntMap qualified as IM
-import Debug.Trace (trace, traceM)
 import TIS100.Errors (TISError (..), TISErrorCode (..), TISErrorOr)
-import TIS100.Parser.Base (Parser, parseInt, parseToken)
-import Text.Megaparsec (MonadParsec (eof, label, try), parse, sepBy, sepEndBy, some, (<|>))
+import TIS100.Parser.Base (Parser, parseInt)
+import Text.Megaparsec (MonadParsec (eof, try), parse, sepBy, sepEndBy, some, (<|>))
 import Text.Megaparsec.Char (alphaNumChar, char, letterChar, space, string)
 
 data Register = ACC | NIL | LEFT | RIGHT | UP | DOWN | ANY | LAST
@@ -41,7 +40,7 @@ parseLabel = some alphaNumChar
 parseLabelDef :: Parser LabelOrInstruction
 parseLabelDef = do
   label <- parseLabel
-  char ':'
+  _ <- char ':'
   return $ Label label
 
 parseRegister :: Parser Register
@@ -63,49 +62,49 @@ parseRegisterOrConstant = try (Register <$> parseRegister) <|> Constant <$> pars
 
 parseNOP :: Parser LabelOrInstruction
 parseNOP = do
-  string "NOP"
+  _ <- string "NOP"
   return NOP
 
 parseMOV :: Parser LabelOrInstruction
 parseMOV = do
-  string "MOV"
+  _ <- string "MOV"
   space
   src <- parseRegisterOrConstant
   space
-  char ','
+  _ <- char ','
   space
   MOV src <$> parseRegister
 
 parseSWP :: Parser LabelOrInstruction
 parseSWP = do
-  string "SWP"
+  _ <- string "SWP"
   return SWP
 
 parseSAV :: Parser LabelOrInstruction
 parseSAV = do
-  string "SAV"
+  _ <- string "SAV"
   return SAV
 
 parseADD :: Parser LabelOrInstruction
 parseADD = do
-  string "ADD"
+  _ <- string "ADD"
   space
   ADD <$> parseRegisterOrConstant
 
 parseSUB :: Parser LabelOrInstruction
 parseSUB = do
-  string "SUB"
+  _ <- string "SUB"
   space
   SUB <$> parseRegisterOrConstant
 
 parseNEG :: Parser LabelOrInstruction
 parseNEG = do
-  string "NEG"
+  _ <- string "NEG"
   return NEG
 
 parseJump :: String -> (String -> LabelOrInstruction) -> Parser LabelOrInstruction
 parseJump ins constructor = do
-  string ins
+  _ <- string ins
   space
   constructor <$> parseLabel
 
@@ -126,7 +125,7 @@ parseJLZ = parseJump "JLZ" JLZ
 
 parseJRO :: Parser LabelOrInstruction
 parseJRO = do
-  string "JRO"
+  _ <- string "JRO"
   space
   JRO <$> parseRegisterOrConstant
 
@@ -138,7 +137,7 @@ parseLabelOrInstruction = try parseLabelDef <|> try parseInstruction
 
 parseTileAsm :: Parser (Int, TileAsmSource)
 parseTileAsm = do
-  char '@'
+  _ <- char '@'
   n <- parseInt
   space
   labelsOrInstructions <- sepEndBy (try parseLabelOrInstruction') $ try endOfTileProgram
@@ -150,12 +149,12 @@ parseTileAsm = do
     return li
   endOfTileProgram = void space <|> void (char '@') <|> eof
 
-parseAllAsm :: AsmSource -> Parser AsmSource
-parseAllAsm tileSources = do
+parseAllAsm :: Parser AsmSource
+parseAllAsm = do
   sources <- sepBy parseTileAsm space
   return $ IM.fromList sources
 
 parseAsm :: String -> TISErrorOr AsmSource
-parseAsm asmSrc = case parse (parseAllAsm IM.empty) "tis100src" asmSrc of
+parseAsm asmSrc = case parse parseAllAsm "tis100src" asmSrc of
   Left err -> Left $ TISError TISParseError $ show err
   Right cfg -> Right cfg
