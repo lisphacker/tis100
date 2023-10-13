@@ -1,17 +1,13 @@
 module TIS100.Parser.ConfigParser where
 
-import Control.Monad (replicateM, void)
+import Control.Monad (replicateM)
 import Data.IntMap qualified as IM
-import Data.Void (Void)
-import Debug.Trace (traceM)
-import GHC.IO.Handle (hGetContents)
 import System.FilePath (takeDirectory, (</>))
-import System.IO (stdin)
 import TIS100.Errors (TISError (..), TISErrorCode (TISParseError), TISErrorOr)
 import TIS100.Parser.Base (Parser, parseInt, parseToken)
-import TIS100.Parser.Config (Config (..), IODef, IOSource (..), TileType (..))
-import Text.Megaparsec (MonadParsec (eof, takeWhile1P, try), Parsec, anySingleBut, count, manyTill, oneOf, parse, some, (<|>))
-import Text.Megaparsec.Char (char, printChar, space, spaceChar, string)
+import TIS100.Parser.Config (Config (Config, inputs, refOutputs), IODef, IOSource (..), TileType (..))
+import Text.Megaparsec (MonadParsec (eof, try), count, oneOf, parse, some, (<|>))
+import Text.Megaparsec.Char (space, string)
 
 data Direction = Input | Output
   deriving (Eq, Show)
@@ -31,11 +27,12 @@ parseRow n = do
   parseTileType 'C' = Conpute
   parseTileType 'S' = Stack
   parseTileType 'D' = Disabled
+  parseTileType tileType = error $ "Unknown tile type in config: " ++ [tileType]
 
 parseIOSource :: Parser IOSource
 parseIOSource = do
   space
-  string "NUMERIC"
+  _ <- string "NUMERIC"
   space
   srcType <- parseToken
   space
@@ -55,16 +52,16 @@ parseIODef = do
   return (dir, n, src)
 
 parseIODefs :: IODef -> IODef -> Parser (IODef, IODef)
-parseIODefs inputs outputs =
+parseIODefs inputs_ outputs =
   do
     try $ do
       space
       eof
-      return $ (inputs, outputs)
+      return $ (inputs_, outputs)
     <|> do
       space
       (dir, n, iosrc) <- parseIODef
-      parseIODefs (condInf n dir Input inputs iosrc) (condInf n dir Output outputs iosrc)
+      parseIODefs (condInf n dir Input inputs_ iosrc) (condInf n dir Output outputs iosrc)
  where
   condInf :: Int -> Direction -> Direction -> IODef -> IOSource -> IODef
   condInf n dir refDir ioSrc ioDef = if dir == refDir then IM.insert n ioDef ioSrc else ioSrc
@@ -80,8 +77,8 @@ cfgParser = do
     space
     return tilesRow
   space
-  (inputs, refOutputs) <- parseIODefs IM.empty IM.empty
-  return $ Config rows cols tiles inputs IM.empty refOutputs
+  (inputs_, refOutputs_) <- parseIODefs IM.empty IM.empty
+  return $ Config rows cols tiles inputs_ IM.empty refOutputs_
 
 parseConfig :: String -> TISErrorOr Config
 parseConfig cfgSrc = case parse cfgParser "tis100cfg" cfgSrc of

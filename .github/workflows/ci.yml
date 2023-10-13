@@ -23,10 +23,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: freckle/stack-cache-action@main
-        with:
-          stack-yaml: ${{ matrix.stack-yaml }}
-      - uses: freckle/stack-action@main
+      - uses: freckle/stack-action@v4
         with:
           stack-yaml: ${{ matrix.stack-yaml }}
  
