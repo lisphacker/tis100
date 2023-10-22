@@ -1,6 +1,6 @@
 module TIS100.Tiles.T21 where
 
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Vector qualified as V
 import TIS100.Tiles.Base (Port' (..), RunState (..), Value (..))
 import TIS100.Tiles.ConnectedTile (IsConnectedTile (..))
@@ -157,29 +157,28 @@ instance IsConnectedTile T21 where
     WaitingOnWrite _ _ -> t
    where
     stepReady :: T21
-    stepReady = fromMaybe t stepReady'
+    stepReady = stepReady'
      where
-      stepReady' :: Maybe T21
-      stepReady' = case getCurrentInstruction t of
-        Nothing -> Nothing
-        Just NOP -> Just $ incPC t
-        Just (MOVI v dst) -> Just $ incPC $ writeRegOrPort dst (t, Just v)
-        Just (MOV src dst) -> Just $ incPC $ writeRegOrPort dst $ readRegOrPort src t
-        Just SWP -> Just $ incPC $ swapAccBak t
-        Just SAV -> Just $ incPC $ writeRegOrPort (Register BAK) $ readRegOrPort (Register ACC) t
-        Just (ADDI v) -> Just $ incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (+)) (t, Just v) $ readRegOrPort (Register ACC) t
-        Just (ADD src) -> Just $ incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (+)) (readRegOrPort src t) (readRegOrPort (Register ACC) t)
-        Just (SUBI v) -> Just $ incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (-)) (t, Just v) $ readRegOrPort (Register ACC) t
-        Just (SUB src) -> Just $ incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (-)) (readRegOrPort src t) (readRegOrPort (Register ACC) t)
-        Just NEG -> Just $ incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (-) (t, Just $ Value 0) $ readRegOrPort (Register ACC) t
-        Just (JMP addr) -> Just $ t{tileState = (tileState t){pc = addr}}
-        Just (JCC cond addr) -> case cond of
-          EZ -> if acc (tileState t) == 0 then Just $ t{tileState = (tileState t){pc = addr}} else Just $ incPC t
-          NZ -> if acc (tileState t) /= 0 then Just $ t{tileState = (tileState t){pc = addr}} else Just $ incPC t
-          GZ -> if acc (tileState t) > 0 then Just $ t{tileState = (tileState t){pc = addr}} else Just $ incPC t
-          LZ -> if acc (tileState t) < 0 then Just $ t{tileState = (tileState t){pc = addr}} else Just $ incPC t
-        Just (JROI v) -> Just $ addValueToPC (t, Just v)
-        Just (JRO src) -> Just $ addValueToPC $ readRegOrPort src t
+      stepReady' :: T21
+      stepReady' = case fromJust $ getCurrentInstruction t of
+        NOP -> incPC t
+        MOVI v dst -> incPC $ writeRegOrPort dst (t, Just v)
+        MOV src dst -> incPC $ writeRegOrPort dst $ readRegOrPort src t
+        SWP -> incPC $ swapAccBak t
+        SAV -> incPC $ writeRegOrPort (Register BAK) $ readRegOrPort (Register ACC) t
+        ADDI v -> incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (+)) (t, Just v) $ readRegOrPort (Register ACC) t
+        ADD src -> incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (+)) (readRegOrPort src t) (readRegOrPort (Register ACC) t)
+        SUBI v -> incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (-)) (t, Just v) $ readRegOrPort (Register ACC) t
+        SUB src -> incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (-)) (readRegOrPort src t) (readRegOrPort (Register ACC) t)
+        NEG -> incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (-) (t, Just $ Value 0) $ readRegOrPort (Register ACC) t
+        JMP addr -> t{tileState = (tileState t){pc = addr}}
+        JCC cond addr -> case cond of
+          EZ -> if acc (tileState t) == 0 then t{tileState = (tileState t){pc = addr}} else incPC t
+          NZ -> if acc (tileState t) /= 0 then t{tileState = (tileState t){pc = addr}} else incPC t
+          GZ -> if acc (tileState t) > 0 then t{tileState = (tileState t){pc = addr}} else incPC t
+          LZ -> if acc (tileState t) < 0 then t{tileState = (tileState t){pc = addr}} else incPC t
+        JROI v -> addValueToPC (t, Just v)
+        JRO src -> addValueToPC $ readRegOrPort src t
       maybeAddSub :: (Value -> Value -> Value) -> (T21, Maybe Value) -> (T21, Maybe Value) -> (T21, Maybe Value)
       maybeAddSub f (t', Just v1) (_, Just v2) = (t', Just $ f v1 v2)
       maybeAddSub _ tv _ = tv -- Just to silence the linter

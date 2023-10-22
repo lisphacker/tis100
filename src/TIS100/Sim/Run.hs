@@ -23,19 +23,19 @@ data SimState = SimState
 type RWTileVector = MV.MVector RealWorld CPU.PositionedTile
 
 dumpSimState :: String -> SimState -> IO ()
-dumpSimState prefix s = do
-  return ()
+dumpSimState _ _ = return ()
 
--- print $ prefix
--- print $ "  T1:  " ++ show (flip (V.!) 1 . CPU.tiles . cpu $ s)
--- print $ "  T2:  " ++ show (flip (V.!) 2 . CPU.tiles . cpu $ s)
--- print $ "  T5:  " ++ show (flip (V.!) 5 . CPU.tiles . cpu $ s)
--- print $ "  T9:  " ++ show (flip (V.!) 9 . CPU.tiles . cpu $ s)
--- print $ "  T10: " ++ show (flip (V.!) 10 . CPU.tiles . cpu $ s)
--- print $ "  IN1:  " ++ show (IM.lookup 1 $ inputs s)
--- print $ "  IN2:  " ++ show (IM.lookup 2 $ inputs s)
--- print $ "  OUT1:  " ++ show (IM.lookup 1 $ outputs s)
--- print $ "  OUT2:  " ++ show (IM.lookup 2 $ outputs s)
+-- dumpSimState prefix s = do
+--   print $ prefix
+--   print $ "  T1:  " ++ show (flip (V.!) 1 . CPU.tiles . cpu $ s)
+--   print $ "  T2:  " ++ show (flip (V.!) 2 . CPU.tiles . cpu $ s)
+--   print $ "  T5:  " ++ show (flip (V.!) 5 . CPU.tiles . cpu $ s)
+--   print $ "  T9:  " ++ show (flip (V.!) 9 . CPU.tiles . cpu $ s)
+--   print $ "  T10: " ++ show (flip (V.!) 10 . CPU.tiles . cpu $ s)
+--   print $ "  IN1:  " ++ show (IM.lookup 1 $ inputs s)
+--   print $ "  IN2:  " ++ show (IM.lookup 2 $ inputs s)
+--   print $ "  OUT1:  " ++ show (IM.lookup 1 $ outputs s)
+--   print $ "  OUT2:  " ++ show (IM.lookup 2 $ outputs s)
 
 loopUntilNoChange :: Int -> SimState -> IO SimState
 loopUntilNoChange i s = do
@@ -121,7 +121,7 @@ processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles_) ins_ outs_
                     return (tiles, ins, outs)
                   Nothing -> return (tiles, ins, outs)
               Nothing -> return (tiles, ins, outs)
-      Tiles.WaitingOnWrite p pv -> do
+      Tiles.WaitingOnWrite p _ -> do
         if r == rows - 1 && p == Tiles.DOWN
           then do
             let (tile', maybeV) = readValueFrom p tile
