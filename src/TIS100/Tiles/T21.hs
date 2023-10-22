@@ -245,7 +245,7 @@ instance IsConnectedTile T21 where
       Nothing -> t
       Just (MOV (Port p') dst) ->
         if p == p'
-          then case getPortVal p t of
+          then case getPortVal True p t of
             (t', Just v) -> incPC $ writeRegOrPort dst (t', Just v)
             (t', Nothing) -> t'
           else t

@@ -24,11 +24,13 @@ type RWTileVector = MV.MVector RealWorld CPU.PositionedTile
 
 dumpSimState :: String -> SimState -> IO ()
 dumpSimState prefix s = do
-  print $ prefix
-  print $ "  " ++ show (((flip (V.!)) 1) . CPU.tiles . cpu $ s)
-  print $ "  " ++ show (((flip (V.!)) 2) . CPU.tiles . cpu $ s)
-  print $ "  IN1:  " ++ show (IM.lookup 1 $ inputs s)
-  print $ "  IN2:  " ++ show (IM.lookup 2 $ inputs s)
+  return ()
+
+-- print $ prefix
+-- print $ "  " ++ show (((flip (V.!)) 1) . CPU.tiles . cpu $ s)
+-- print $ "  " ++ show (((flip (V.!)) 2) . CPU.tiles . cpu $ s)
+-- print $ "  IN1:  " ++ show (IM.lookup 1 $ inputs s)
+-- print $ "  IN2:  " ++ show (IM.lookup 2 $ inputs s)
 
 loopUntilNoChange :: Int -> SimState -> IO SimState
 loopUntilNoChange i s = do
