@@ -19,8 +19,8 @@ instance Num Value where
 
 data RunState
   = Ready
-  | WaitingOnRead Port'
-  | WaitingOnWrite Port'
+  | WaitingOnRead Port' (Maybe Value)
+  | WaitingOnWrite Port' Value
   deriving (Eq, Show)
 
 data Port' = ANY | LAST | LEFT | RIGHT | UP | DOWN

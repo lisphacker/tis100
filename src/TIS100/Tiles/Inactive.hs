@@ -10,12 +10,6 @@ instance IsConnectedTile InactiveTile where
   getRunState _ = Tiles.Ready
   setRunState _ _ = InactiveTile
 
-  readable _ _ = False
-  writable _ _ = False
-
-  isWaitingOnRead _ = Just Tiles.ANY
-  isWaitingOnWrite _ = Just Tiles.ANY
-
   readValueFrom _ t = (t, Nothing)
   writeValueTo _ _ t = Nothing
 

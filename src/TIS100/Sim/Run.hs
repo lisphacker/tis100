@@ -87,7 +87,8 @@ processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles_) ins_ outs_
     let (r, c) = CPU.position ptile
 
     case getRunState tile of
-      Tiles.WaitingOnRead p -> do
+      Tiles.WaitingOnRead _ (Just _) -> return (tiles, ins, outs)
+      Tiles.WaitingOnRead p Nothing -> do
         if r == 0 && p == Tiles.UP
           then do
             (maybeV, ins') <- readInputValue c ins
@@ -105,18 +106,18 @@ processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles_) ins_ outs_
             optile <- MV.read tiles o
             let otile = CPU.tile optile
             let op = Tiles.getOppositePort p
-            if readable op otile
-              then do
-                let (otile', val) = readValueFrom op otile
-                let maybeTile' = writeValueTo p (fromJust val) tile
+            let (otile', maybeVal) = readValueFrom op otile
+            case maybeVal of
+              Just val -> do
+                let maybeTile' = writeValueTo p val tile
                 case maybeTile' of
                   Just tile' -> do
                     MV.write tiles i $ ptile{CPU.tile = tile'}
                     MV.write tiles o $ optile{CPU.tile = otile'}
                     return (tiles, ins, outs)
                   Nothing -> return (tiles, ins, outs)
-              else return (tiles, ins, outs)
-      Tiles.WaitingOnWrite p -> do
+              Nothing -> return (tiles, ins, outs)
+      Tiles.WaitingOnWrite p pv -> do
         if r == rows - 1 && p == Tiles.DOWN
           then do
             let (tile', maybeV) = readValueFrom p tile
@@ -131,18 +132,14 @@ processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles_) ins_ outs_
             optile <- MV.read tiles o
             let otile = CPU.tile optile
             let op = Tiles.getOppositePort p
-            print $ "  Tile " ++ show o ++ " writable = " ++ show (writable op otile)
-            if writable op otile
-              then do
-                let (tile', val) = readValueFrom p tile
-                let maybeOtile' = writeValueTo op (fromJust val) otile
-                case maybeOtile' of
-                  Just otile' -> do
-                    MV.write tiles i $ ptile{CPU.tile = tile'}
-                    MV.write tiles o $ optile{CPU.tile = otile'}
-                    return (tiles, ins, outs)
-                  Nothing -> return (tiles, ins, outs)
-              else return (tiles, ins, outs)
+            let (tile', val) = readValueFrom p tile
+            let maybeOtile' = writeValueTo op (fromJust val) otile
+            case maybeOtile' of
+              Just otile' -> do
+                MV.write tiles i $ ptile{CPU.tile = tile'}
+                MV.write tiles o $ optile{CPU.tile = otile'}
+                return (tiles, ins, outs)
+              Nothing -> return (tiles, ins, outs)
       _ -> return (tiles, ins, outs)
 
   getOtherTile :: Int -> Tiles.Port' -> Int
