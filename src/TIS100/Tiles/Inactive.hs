@@ -11,6 +11,6 @@ instance IsConnectedTile InactiveTile where
   setRunState _ _ = InactiveTile
 
   readValueFrom _ t = (t, Nothing)
-  writeValueTo _ _ t = Nothing
+  writeValueTo _ _ _ = Nothing
 
   step = id

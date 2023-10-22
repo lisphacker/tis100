@@ -27,15 +27,18 @@ dumpSimState prefix s = do
   return ()
 
 -- print $ prefix
--- print $ "  " ++ show (((flip (V.!)) 1) . CPU.tiles . cpu $ s)
--- print $ "  " ++ show (((flip (V.!)) 2) . CPU.tiles . cpu $ s)
+-- print $ "  T1:  " ++ show (flip (V.!) 1 . CPU.tiles . cpu $ s)
+-- print $ "  T2:  " ++ show (flip (V.!) 2 . CPU.tiles . cpu $ s)
+-- print $ "  T5:  " ++ show (flip (V.!) 5 . CPU.tiles . cpu $ s)
+-- print $ "  T9:  " ++ show (flip (V.!) 9 . CPU.tiles . cpu $ s)
+-- print $ "  T10: " ++ show (flip (V.!) 10 . CPU.tiles . cpu $ s)
 -- print $ "  IN1:  " ++ show (IM.lookup 1 $ inputs s)
 -- print $ "  IN2:  " ++ show (IM.lookup 2 $ inputs s)
+-- print $ "  OUT1:  " ++ show (IM.lookup 1 $ outputs s)
+-- print $ "  OUT2:  " ++ show (IM.lookup 2 $ outputs s)
 
 loopUntilNoChange :: Int -> SimState -> IO SimState
 loopUntilNoChange i s = do
-  putStrLn ""
-  putStrLn ""
   dumpSimState "Before: " s
   nextSimState <- runStep s
   dumpSimState "After: " nextSimState
@@ -47,11 +50,12 @@ run :: SimState -> IO SimState
 run = loopUntilNoChange 1
 
 runStep :: SimState -> IO SimState
--- runStep = processComm >=> stepTiles
-runStep s = do
-  s' <- processComm s
-  dumpSimState "After comm: " s'
-  stepTiles s'
+runStep = processComm >=> stepTiles
+
+-- runStep s = do
+--   s' <- processComm s
+--   dumpSimState "After comm: " s'
+--   stepTiles s'
 
 readInputValue :: Int -> CFG.IODef -> IO (Maybe Int, CFG.IODef)
 readInputValue ti iodef = case IM.lookup ti iodef of
