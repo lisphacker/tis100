@@ -80,35 +80,89 @@ getTileRunState = runState . tileState
 setTileRunState :: RunState -> T21 -> T21
 setTileRunState rs tile = tile{tileState = (tileState tile){runState = rs}}
 
-getPortVal :: Port' -> T21 -> (T21, Maybe Value)
-getPortVal p t
+-- getPortVal :: Port' -> T21 -> (T21, Maybe Value)
+-- getPortVal p t
+--   | p == ANY = error "Reads from ANY is not supported yet"
+--   | p == LAST = error "Reads from LAST is not supported yet"
+--   | p == LEFT = getPortVal' left t{tileState = (tileState t){left = Nothing, runState = rs}}
+--   | p == RIGHT = getPortVal' right t{tileState = (tileState t){right = Nothing, runState = rs}}
+--   | p == UP = getPortVal' up t{tileState = (tileState t){up = Nothing, runState = rs}}
+--   | p == DOWN = getPortVal' down t{tileState = (tileState t){down = Nothing, runState = rs}}
+--   | otherwise = error "Should not reach this code"
+--  where
+--   getPortVal' f t' = case f $ tileState t of
+--     Just v -> (t', Just v)
+--     Nothing -> (t{tileState = (tileState t){runState = WaitingOnRead p}}, Nothing)
+--   rs = if (runState . tileState) t == WaitingOnWrite p then Ready else (runState . tileState) t
+
+-- setPortVal :: Port' -> Value -> T21 -> Maybe T21
+-- setPortVal p v t
+--   | p == ANY = error "Writes to ANY is not supported yet"
+--   | p == LAST = error "Writes to LAST is not supported yet"
+--   | p == LEFT = t{tileState = (tileState t){left = Just v, runState = rs}}
+--   | p == RIGHT = t{tileState = (tileState t){right = Just v, runState = rs}}
+--   | p == UP = t{tileState = (tileState t){up = Just v, runState = rs}}
+--   | p == DOWN = t{tileState = (tileState t){down = Just v, runState = rs}}
+--   | otherwise = error "Should not reach this code"
+--  where
+--   rs = case (runState . tileState) t of
+--     WaitingOnRead _ -> Ready
+--     WaitingOnWrite p' -> WaitingOnWrite p'
+--     Ready -> WaitingOnWrite p
+
+getPortVal :: Bool -> Port' -> T21 -> (T21, Maybe Value)
+getPortVal internalCall p t
   | p == ANY = error "Reads from ANY is not supported yet"
   | p == LAST = error "Reads from LAST is not supported yet"
-  | p == LEFT = getPortVal' left t{tileState = (tileState t){left = Nothing, runState = rs}}
-  | p == RIGHT = getPortVal' right t{tileState = (tileState t){right = Nothing, runState = rs}}
-  | p == UP = getPortVal' up t{tileState = (tileState t){up = Nothing, runState = rs}}
-  | p == DOWN = getPortVal' down t{tileState = (tileState t){down = Nothing, runState = rs}}
+  | p == LEFT = getPortVal' left t{tileState = (tileState t){left = Nothing}}
+  | p == RIGHT = getPortVal' right t{tileState = (tileState t){right = Nothing}}
+  | p == UP = getPortVal' up t{tileState = (tileState t){up = Nothing}}
+  | p == DOWN = getPortVal' down t{tileState = (tileState t){down = Nothing}}
   | otherwise = error "Should not reach this code"
  where
-  getPortVal' f t' = case f $ tileState t of
-    Just v -> (t', Just v)
-    Nothing -> (t{tileState = (tileState t){runState = WaitingOnRead p}}, Nothing)
-  rs = if (runState . tileState) t == WaitingOnWrite p then Ready else (runState . tileState) t
+  getPortVal' = if internalCall then getPortValInt else getPortValExt
+  getPortValInt f t' = case (runState . tileState) t' of
+    WaitingOnWrite p' ->
+      if p' == p
+        then case (f . tileState) t of
+          Just v -> (t'{tileState = (tileState t'){runState = Ready}}, Just v)
+          Nothing -> (t'{tileState = (tileState t'){runState = WaitingOnRead p}}, Nothing)
+        else (t, Nothing)
+    WaitingOnRead p' -> (t, Nothing)
+    Ready -> case (f . tileState) t of
+      Just v -> (t'{tileState = (tileState t'){runState = Ready}}, Just v)
+      Nothing -> (t'{tileState = (tileState t'){runState = WaitingOnRead p}}, Nothing)
+  getPortValExt f t' = case (runState . tileState) t' of
+    WaitingOnWrite p' ->
+      if p' == p
+        then case (f . tileState) t of
+          Just v -> (t'{tileState = (tileState t'){runState = Ready}}, Just v)
+          Nothing -> (t'{tileState = (tileState t'){runState = WaitingOnRead p}}, Nothing)
+        else (t, Nothing)
+    WaitingOnRead p' -> (t, Nothing)
+    Ready -> case (f . tileState) t of
+      Just v -> (t'{tileState = (tileState t'){runState = Ready}}, Just v)
+      Nothing -> (t'{tileState = (tileState t'){runState = WaitingOnRead p}}, Nothing)
 
-setPortVal :: Port' -> Value -> T21 -> T21
-setPortVal p v t
+setPortVal :: Bool -> Port' -> Value -> T21 -> Maybe T21
+setPortVal internalCall p v t
   | p == ANY = error "Writes to ANY is not supported yet"
   | p == LAST = error "Writes to LAST is not supported yet"
-  | p == LEFT = t{tileState = (tileState t){left = Just v, runState = rs}}
-  | p == RIGHT = t{tileState = (tileState t){right = Just v, runState = rs}}
-  | p == UP = t{tileState = (tileState t){up = Just v, runState = rs}}
-  | p == DOWN = t{tileState = (tileState t){down = Just v, runState = rs}}
+  | p == LEFT = setPortVal' t{tileState = (tileState t){left = Just v}}
+  | p == RIGHT = setPortVal' t{tileState = (tileState t){right = Just v}}
+  | p == UP = setPortVal' t{tileState = (tileState t){up = Just v}}
+  | p == DOWN = setPortVal' t{tileState = (tileState t){down = Just v}}
   | otherwise = error "Should not reach this code"
  where
-  rs = case (runState . tileState) t of
-    WaitingOnRead _ -> Ready
-    WaitingOnWrite p' -> WaitingOnWrite p'
-    Ready -> WaitingOnWrite p
+  setPortVal' = if internalCall then setPortValInt else setPortValExt
+  setPortValInt t' = case (runState . tileState) t of
+    WaitingOnRead p' -> if p' == p then Just $ t'{tileState = (tileState t'){runState = Ready}} else Nothing
+    WaitingOnWrite p' -> Nothing
+    Ready -> Just $ t'{tileState = (tileState t'){runState = WaitingOnWrite p}}
+  setPortValExt t' = case (runState . tileState) t of
+    WaitingOnRead p' -> if p' == p then Just $ t'{tileState = (tileState t'){runState = Ready}} else Nothing
+    WaitingOnWrite p' -> Nothing
+    Ready -> Just $ t'{tileState = (tileState t'){runState = WaitingOnWrite p}}
 
 getRegVal :: Register' -> T21 -> Value
 getRegVal r t = case r of
@@ -158,10 +212,14 @@ instance IsConnectedTile T21 where
   writable p t = case p of
     ANY -> True
     LAST -> True
-    LEFT -> isNothing $ left $ tileState t
-    RIGHT -> isNothing $ right $ tileState t
-    UP -> isNothing $ up $ tileState t
-    DOWN -> isNothing $ down $ tileState t
+    LEFT -> writable' left
+    RIGHT -> writable' right
+    UP -> writable' up
+    DOWN -> writable' down
+   where
+    writable' f =
+      let ts = tileState t
+       in runState ts == WaitingOnRead p && isNothing (f ts)
 
   isWaitingOnRead t = case getTileRunState t of
     WaitingOnRead p -> Just p
@@ -171,9 +229,9 @@ instance IsConnectedTile T21 where
     WaitingOnWrite p -> Just p
     _ -> Nothing
 
-  readValueFrom = getPortVal
+  readValueFrom = getPortVal False -- External call
 
-  writeValueTo = setPortVal
+  writeValueTo = setPortVal False -- External call
 
   step t_ = case (runState . tileState) t_ of
     Ready -> stepReady t_
@@ -229,7 +287,7 @@ readRegOrPort rp t = case rp of
       ACC -> acc (tileState t)
       BAK -> bak (tileState t)
       NIL -> Value 0
-  Port p -> getPortVal p t
+  Port p -> getPortVal True p t
 
 writeRegOrPort :: RegisterOrPort -> (T21, Maybe Value) -> T21
 writeRegOrPort rp (t, Just v) = case rp of
@@ -237,7 +295,7 @@ writeRegOrPort rp (t, Just v) = case rp of
     ACC -> t{tileState = (tileState t){acc = v}}
     BAK -> t{tileState = (tileState t){bak = v}}
     NIL -> t
-  Port p -> setPortVal p v t
+  Port p -> fromMaybe t (setPortVal True p v t)
 writeRegOrPort _ (t, Nothing) = t
 
 swapAccBak :: T21 -> T21

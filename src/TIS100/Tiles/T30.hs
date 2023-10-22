@@ -19,6 +19,6 @@ instance IsConnectedTile T30 where
 
   readValueFrom _ (T30 []) = (T30 [], Nothing)
   readValueFrom _ (T30 (v : vs)) = (T30 vs, Just v)
-  writeValueTo _ v (T30 vs) = T30 (vs ++ [v])
+  writeValueTo _ v (T30 vs) = Just $ T30 (vs ++ [v])
 
   step = id

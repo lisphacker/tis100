@@ -14,7 +14,7 @@ class (Show t) => IsConnectedTile t where
   isWaitingOnWrite :: t -> Maybe Port'
 
   readValueFrom :: Port' -> t -> (t, Maybe Value)
-  writeValueTo :: Port' -> Value -> t -> t
+  writeValueTo :: Port' -> Value -> t -> Maybe t
 
   step :: t -> t
 
@@ -40,6 +40,6 @@ instance IsConnectedTile ConnectedTile where
   isWaitingOnWrite (ConnectedTile t) = isWaitingOnWrite t
 
   readValueFrom p (ConnectedTile t) = (ConnectedTile t', v) where (t', v) = readValueFrom p t
-  writeValueTo p v (ConnectedTile t) = ConnectedTile $ writeValueTo p v t
+  writeValueTo p v (ConnectedTile t) = ConnectedTile <$> writeValueTo p v t
 
   step (ConnectedTile t) = ConnectedTile $ step t
