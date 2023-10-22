@@ -22,31 +22,40 @@ data SimState = SimState
 
 type RWTileVector = MV.MVector RealWorld CPU.PositionedTile
 
+dumpSimState :: String -> SimState -> IO ()
+dumpSimState _ _ = return ()
+
+-- dumpSimState prefix s = do
+--   print $ prefix
+--   print $ "  T1:  " ++ show (flip (V.!) 1 . CPU.tiles . cpu $ s)
+--   print $ "  T2:  " ++ show (flip (V.!) 2 . CPU.tiles . cpu $ s)
+--   print $ "  T5:  " ++ show (flip (V.!) 5 . CPU.tiles . cpu $ s)
+--   print $ "  T9:  " ++ show (flip (V.!) 9 . CPU.tiles . cpu $ s)
+--   print $ "  T10: " ++ show (flip (V.!) 10 . CPU.tiles . cpu $ s)
+--   print $ "  IN1:  " ++ show (IM.lookup 1 $ inputs s)
+--   print $ "  IN2:  " ++ show (IM.lookup 2 $ inputs s)
+--   print $ "  OUT1:  " ++ show (IM.lookup 1 $ outputs s)
+--   print $ "  OUT2:  " ++ show (IM.lookup 2 $ outputs s)
+
 loopUntilNoChange :: Int -> SimState -> IO SimState
 loopUntilNoChange i s = do
+  dumpSimState "Before: " s
   nextSimState <- runStep s
-  -- print $ "Iteration " ++ show i
-  -- print $ "Before: "
-  -- print $ "  " ++ show (V.head . CPU.tiles . Run.cpu $ s)
-  -- print $ "  " ++ show (((flip (V.!)) 4) . CPU.tiles . Run.cpu $ s)
-  -- print $ "  " ++ show (((flip (V.!)) 8) . CPU.tiles . Run.cpu $ s)
-  -- print $ "  IN:  " ++ show (IM.lookup 0 $ Run.inputs s)
-  -- print $ "  OUT: " ++ show (IM.lookup 0 $ Run.outputs s)
-  -- print $ "After:  "
-  -- print $ "  " ++ show (V.head . CPU.tiles . Run.cpu $ nextSimState)
-  -- print $ "  " ++ show (((flip (V.!)) 4) . CPU.tiles . Run.cpu $ nextSimState)
-  -- print $ "  " ++ show (((flip (V.!)) 8) . CPU.tiles . Run.cpu $ nextSimState)
-  -- print $ "  IN:  " ++ show (IM.lookup 0 $ Run.inputs nextSimState)
-  -- print $ "  OUT: " ++ show (IM.lookup 0 $ Run.outputs nextSimState)
+  dumpSimState "After: " nextSimState
   if nextSimState == s
     then return s
     else loopUntilNoChange (i + 1) nextSimState
 
 run :: SimState -> IO SimState
-run s = loopUntilNoChange 1 s
+run = loopUntilNoChange 1
 
 runStep :: SimState -> IO SimState
 runStep = processComm >=> stepTiles
+
+-- runStep s = do
+--   s' <- processComm s
+--   dumpSimState "After comm: " s'
+--   stepTiles s'
 
 readInputValue :: Int -> CFG.IODef -> IO (Maybe Int, CFG.IODef)
 readInputValue ti iodef = case IM.lookup ti iodef of
@@ -82,30 +91,37 @@ processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles_) ins_ outs_
     let (r, c) = CPU.position ptile
 
     case getRunState tile of
-      Tiles.WaitingOnRead p -> do
+      Tiles.WaitingOnRead _ (Just _) -> return (tiles, ins, outs)
+      Tiles.WaitingOnRead p Nothing -> do
         if r == 0 && p == Tiles.UP
           then do
             (maybeV, ins') <- readInputValue c ins
             case maybeV of
               Just v -> do
-                let tile' = writeValueTo p (Tiles.Value v) tile
-                MV.write tiles i $ ptile{CPU.tile = tile'}
-                return (tiles, ins', outs)
-              Nothing -> return (tiles, ins', outs)
+                let maybeTile' = writeValueTo p (Tiles.Value v) tile
+                case maybeTile' of
+                  Just tile' -> do
+                    MV.write tiles i $ ptile{CPU.tile = tile'}
+                    return (tiles, ins', outs)
+                  Nothing -> return (tiles, ins, outs)
+              Nothing -> return (tiles, ins, outs)
           else do
             let o = getOtherTile i p
             optile <- MV.read tiles o
             let otile = CPU.tile optile
             let op = Tiles.getOppositePort p
-            if readable op otile
-              then do
-                let (otile', val) = readValueFrom op otile
-                let tile' = writeValueTo p (fromJust val) tile
-                MV.write tiles i $ ptile{CPU.tile = tile'}
-                MV.write tiles o $ optile{CPU.tile = otile'}
-                return (tiles, ins, outs)
-              else return (tiles, ins, outs)
-      Tiles.WaitingOnWrite p -> do
+            let (otile', maybeVal) = readValueFrom op otile
+            case maybeVal of
+              Just val -> do
+                let maybeTile' = writeValueTo p val tile
+                case maybeTile' of
+                  Just tile' -> do
+                    MV.write tiles i $ ptile{CPU.tile = tile'}
+                    MV.write tiles o $ optile{CPU.tile = otile'}
+                    return (tiles, ins, outs)
+                  Nothing -> return (tiles, ins, outs)
+              Nothing -> return (tiles, ins, outs)
+      Tiles.WaitingOnWrite p _ -> do
         if r == rows - 1 && p == Tiles.DOWN
           then do
             let (tile', maybeV) = readValueFrom p tile
@@ -120,14 +136,14 @@ processComm (SimState (CPU.CPUState (CPU.CPUConfig rows cols) tiles_) ins_ outs_
             optile <- MV.read tiles o
             let otile = CPU.tile optile
             let op = Tiles.getOppositePort p
-            if writable op otile
-              then do
-                let (tile', val) = readValueFrom p tile
-                let otile' = writeValueTo op (fromJust val) otile
+            let (tile', val) = readValueFrom p tile
+            let maybeOtile' = writeValueTo op (fromJust val) otile
+            case maybeOtile' of
+              Just otile' -> do
                 MV.write tiles i $ ptile{CPU.tile = tile'}
                 MV.write tiles o $ optile{CPU.tile = otile'}
                 return (tiles, ins, outs)
-              else return (tiles, ins, outs)
+              Nothing -> return (tiles, ins, outs)
       _ -> return (tiles, ins, outs)
 
   getOtherTile :: Int -> Tiles.Port' -> Int

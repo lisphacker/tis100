@@ -50,7 +50,7 @@ createInitialCPUState cfg asm =
 
   getTileAsm :: Int -> TISErrorOr T21.TileProgram
   getTileAsm i = case IM.lookup i asm of
-    Nothing -> Left $ TISError TISParseError $ "No tile asm forat index " ++ show i
+    Nothing -> Right $ V.singleton T21.NOP
     Just a -> resolveAsm a
 
 resolveAsm :: AP.TileAsmSource -> TISErrorOr T21.TileProgram

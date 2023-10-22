@@ -1,6 +1,6 @@
 module TIS100.Tiles.T21 where
 
-import Data.Maybe (fromMaybe, isJust, isNothing)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Vector qualified as V
 import TIS100.Tiles.Base (Port' (..), RunState (..), Value (..))
 import TIS100.Tiles.ConnectedTile (IsConnectedTile (..))
@@ -40,10 +40,6 @@ type TileProgram = V.Vector Instruction
 data TileState = TileState
   { acc :: Value
   , bak :: Value
-  , left :: Maybe Value
-  , right :: Maybe Value
-  , up :: Maybe Value
-  , down :: Maybe Value
   , last :: Port'
   , pc :: Address
   , runState :: RunState
@@ -63,10 +59,6 @@ createTileState program_ =
         TileState
           { acc = 0
           , bak = 0
-          , left = Nothing
-          , right = Nothing
-          , up = Nothing
-          , down = Nothing
           , last = UP
           , pc = 0
           , runState = Ready
@@ -80,35 +72,42 @@ getTileRunState = runState . tileState
 setTileRunState :: RunState -> T21 -> T21
 setTileRunState rs tile = tile{tileState = (tileState tile){runState = rs}}
 
-getPortVal :: Port' -> T21 -> (T21, Maybe Value)
-getPortVal p t
-  | p == ANY = error "Reads from ANY is not supported yet"
-  | p == LAST = error "Reads from LAST is not supported yet"
-  | p == LEFT = getPortVal' left t{tileState = (tileState t){left = Nothing, runState = rs}}
-  | p == RIGHT = getPortVal' right t{tileState = (tileState t){right = Nothing, runState = rs}}
-  | p == UP = getPortVal' up t{tileState = (tileState t){up = Nothing, runState = rs}}
-  | p == DOWN = getPortVal' down t{tileState = (tileState t){down = Nothing, runState = rs}}
-  | otherwise = error "Should not reach this code"
+getPortVal :: Bool -> Port' -> T21 -> (T21, Maybe Value)
+getPortVal internalCall p t = if internalCall then getPortValInt else getPortValExt
  where
-  getPortVal' f t' = case f $ tileState t of
-    Just v -> (t', Just v)
-    Nothing -> (t{tileState = (tileState t){runState = WaitingOnRead p}}, Nothing)
-  rs = if (runState . tileState) t == WaitingOnWrite p then Ready else (runState . tileState) t
+  getPortValInt = case rs of
+    WaitingOnWrite _ _ -> (t, Nothing)
+    WaitingOnRead _ Nothing -> (t, Nothing)
+    WaitingOnRead p' (Just v) ->
+      if p == p'
+        then (t{tileState = (tileState t){runState = Ready}}, Just v)
+        else (t, Nothing)
+    Ready -> (t{tileState = (tileState t){runState = WaitingOnRead p Nothing}}, Nothing)
 
-setPortVal :: Port' -> Value -> T21 -> T21
-setPortVal p v t
-  | p == ANY = error "Writes to ANY is not supported yet"
-  | p == LAST = error "Writes to LAST is not supported yet"
-  | p == LEFT = t{tileState = (tileState t){left = Just v, runState = rs}}
-  | p == RIGHT = t{tileState = (tileState t){right = Just v, runState = rs}}
-  | p == UP = t{tileState = (tileState t){up = Just v, runState = rs}}
-  | p == DOWN = t{tileState = (tileState t){down = Just v, runState = rs}}
-  | otherwise = error "Should not reach this code"
+  getPortValExt = case rs of
+    WaitingOnWrite p' v ->
+      if p == p'
+        then (incPC $ t{tileState = (tileState t){runState = Ready}}, Just v)
+        else (t, Nothing)
+    _ -> (t, Nothing)
+
+  rs = runState . tileState $ t
+
+setPortVal :: Bool -> Port' -> Value -> T21 -> Maybe T21
+setPortVal internalCall p v t = if internalCall then setPortValInt else setPortValExt
  where
-  rs = case (runState . tileState) t of
-    WaitingOnRead _ -> Ready
-    WaitingOnWrite p' -> WaitingOnWrite p'
-    Ready -> WaitingOnWrite p
+  setPortValInt = case rs of
+    Ready -> Just $ t{tileState = (tileState t){runState = WaitingOnWrite p v}}
+    _ -> Nothing
+
+  setPortValExt = case rs of
+    WaitingOnRead p' Nothing ->
+      if p == p'
+        then Just $ t{tileState = (tileState t){runState = WaitingOnRead p' (Just v)}}
+        else Nothing
+    _ -> Nothing
+
+  rs = runState . tileState $ t
 
 getRegVal :: Register' -> T21 -> Value
 getRegVal r t = case r of
@@ -129,7 +128,7 @@ getCurrentInstruction t = tileProgram t V.!? ix
 
 incPC :: T21 -> T21
 incPC t =
-  if (runState $ tileState t) == Ready
+  if runState (tileState t) == Ready
     then t{tileState = (tileState t){pc = nextPC}}
     else t
  where
@@ -147,76 +146,39 @@ instance IsConnectedTile T21 where
   getRunState = getTileRunState
   setRunState = setTileRunState
 
-  readable p t = case p of
-    ANY -> True
-    LAST -> True
-    LEFT -> isJust $ left $ tileState t
-    RIGHT -> isJust $ right $ tileState t
-    UP -> isJust $ up $ tileState t
-    DOWN -> isJust $ down $ tileState t
+  readValueFrom = getPortVal False -- External call
 
-  writable p t = case p of
-    ANY -> True
-    LAST -> True
-    LEFT -> isNothing $ left $ tileState t
-    RIGHT -> isNothing $ right $ tileState t
-    UP -> isNothing $ up $ tileState t
-    DOWN -> isNothing $ down $ tileState t
+  writeValueTo = setPortVal False -- External call
 
-  isWaitingOnRead t = case getTileRunState t of
-    WaitingOnRead p -> Just p
-    _ -> Nothing
-
-  isWaitingOnWrite t = case getTileRunState t of
-    WaitingOnWrite p -> Just p
-    _ -> Nothing
-
-  readValueFrom = getPortVal
-
-  writeValueTo = setPortVal
-
-  step t_ = case (runState . tileState) t_ of
-    Ready -> stepReady t_
-    WaitingOnRead p_ -> stepWaitingOnRead t_ p_
-    WaitingOnWrite p_ -> stepWaitingOnWrite t_ p_
+  step t = case (runState . tileState) t of
+    Ready -> stepReady
+    WaitingOnRead _ Nothing -> t
+    WaitingOnRead _ (Just _) -> stepReady
+    WaitingOnWrite _ _ -> t
    where
-    stepWaitingOnWrite t _ = t
-
-    stepWaitingOnRead :: T21 -> Port' -> T21
-    stepWaitingOnRead t p = case getCurrentInstruction t of
-      Nothing -> t
-      Just (MOV (Port p') dst) ->
-        if p == p'
-          then case getPortVal p t of
-            (t', Just v) -> incPC $ writeRegOrPort dst (t', Just v)
-            (t', Nothing) -> t'
-          else t
-      _ -> t
-
-    stepReady :: T21 -> T21
-    stepReady t = fromMaybe t stepReady'
+    stepReady :: T21
+    stepReady = stepReady'
      where
-      stepReady' :: Maybe T21
-      stepReady' = case getCurrentInstruction t of
-        Nothing -> Nothing
-        Just NOP -> Just $ incPC t
-        Just (MOVI v dst) -> Just $ incPC $ writeRegOrPort dst (t, Just v)
-        Just (MOV src dst) -> Just $ incPC $ writeRegOrPort dst $ readRegOrPort src t
-        Just SWP -> Just $ incPC $ swapAccBak t
-        Just SAV -> Just $ incPC $ writeRegOrPort (Register BAK) $ readRegOrPort (Register ACC) t
-        Just (ADDI v) -> Just $ incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (+) (t, Just v) $ readRegOrPort (Register ACC) t
-        Just (ADD src) -> Just $ incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (+) (readRegOrPort src t) (readRegOrPort (Register ACC) t)
-        Just (SUBI v) -> Just $ incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (-) (t, Just v) $ readRegOrPort (Register ACC) t
-        Just (SUB src) -> Just $ incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (-) (readRegOrPort src t) (readRegOrPort (Register ACC) t)
-        Just NEG -> Just $ incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (-) (t, Just $ Value 0) $ readRegOrPort (Register ACC) t
-        Just (JMP addr) -> Just $ t{tileState = (tileState t){pc = addr}}
-        Just (JCC cond addr) -> case cond of
-          EZ -> if acc (tileState t) == 0 then Just $ t{tileState = (tileState t){pc = addr}} else Just $ incPC t
-          NZ -> if acc (tileState t) /= 0 then Just $ t{tileState = (tileState t){pc = addr}} else Just $ incPC t
-          GZ -> if acc (tileState t) > 0 then Just $ t{tileState = (tileState t){pc = addr}} else Just $ incPC t
-          LZ -> if acc (tileState t) < 0 then Just $ t{tileState = (tileState t){pc = addr}} else Just $ incPC t
-        Just (JROI v) -> Just $ addValueToPC (t, Just v)
-        Just (JRO src) -> Just $ addValueToPC $ readRegOrPort src t
+      stepReady' :: T21
+      stepReady' = case fromJust $ getCurrentInstruction t of
+        NOP -> incPC t
+        MOVI v dst -> incPC $ writeRegOrPort dst (t, Just v)
+        MOV src dst -> incPC $ writeRegOrPort dst $ readRegOrPort src t
+        SWP -> incPC $ swapAccBak t
+        SAV -> incPC $ writeRegOrPort (Register BAK) $ readRegOrPort (Register ACC) t
+        ADDI v -> incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (+)) (t, Just v) $ readRegOrPort (Register ACC) t
+        ADD src -> incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (+)) (readRegOrPort src t) (readRegOrPort (Register ACC) t)
+        SUBI v -> incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (-)) (t, Just v) $ readRegOrPort (Register ACC) t
+        SUB src -> incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (-)) (readRegOrPort src t) (readRegOrPort (Register ACC) t)
+        NEG -> incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (-) (t, Just $ Value 0) $ readRegOrPort (Register ACC) t
+        JMP addr -> t{tileState = (tileState t){pc = addr}}
+        JCC cond addr -> case cond of
+          EZ -> if acc (tileState t) == 0 then t{tileState = (tileState t){pc = addr}} else incPC t
+          NZ -> if acc (tileState t) /= 0 then t{tileState = (tileState t){pc = addr}} else incPC t
+          GZ -> if acc (tileState t) > 0 then t{tileState = (tileState t){pc = addr}} else incPC t
+          LZ -> if acc (tileState t) < 0 then t{tileState = (tileState t){pc = addr}} else incPC t
+        JROI v -> addValueToPC (t, Just v)
+        JRO src -> addValueToPC $ readRegOrPort src t
       maybeAddSub :: (Value -> Value -> Value) -> (T21, Maybe Value) -> (T21, Maybe Value) -> (T21, Maybe Value)
       maybeAddSub f (t', Just v1) (_, Just v2) = (t', Just $ f v1 v2)
       maybeAddSub _ tv _ = tv -- Just to silence the linter
@@ -229,7 +191,7 @@ readRegOrPort rp t = case rp of
       ACC -> acc (tileState t)
       BAK -> bak (tileState t)
       NIL -> Value 0
-  Port p -> getPortVal p t
+  Port p -> getPortVal True p t
 
 writeRegOrPort :: RegisterOrPort -> (T21, Maybe Value) -> T21
 writeRegOrPort rp (t, Just v) = case rp of
@@ -237,7 +199,7 @@ writeRegOrPort rp (t, Just v) = case rp of
     ACC -> t{tileState = (tileState t){acc = v}}
     BAK -> t{tileState = (tileState t){bak = v}}
     NIL -> t
-  Port p -> setPortVal p v t
+  Port p -> fromMaybe t (setPortVal True p v t)
 writeRegOrPort _ (t, Nothing) = t
 
 swapAccBak :: T21 -> T21

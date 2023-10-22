@@ -32,3 +32,4 @@ testExampleAsm n asmFilePath cfgFilePath = do
 simTestsSpec :: Spec
 simTestsSpec = parallel $ do
   testExampleAsm "segment00150" "examples/segment00150/segment00150.asm" "examples/segment00150/segment00150.cfg"
+  testExampleAsm "segment20176" "examples/segment20176/segment20176.asm" "examples/segment20176/segment20176.cfg"
