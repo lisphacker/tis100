@@ -1,6 +1,5 @@
 module TIS100.Sim.CPU where
 
-import Control.Monad (zipWithM)
 import Data.IntMap qualified as IM
 import Data.Map qualified as M
 import Data.Vector qualified as V
@@ -38,15 +37,24 @@ data CPUState = CPUState
 createInitialCPUState :: C.Config -> AP.AsmSource -> TISErrorOr CPUState
 createInitialCPUState cfg asm =
   let tileTypes = concat $ C.tiles cfg
-   in (CPUState (CPUConfig (C.rows cfg) (C.cols cfg)) . V.fromList <$> zipWithM createTile [0 ..] tileTypes)
+   in (CPUState (CPUConfig (C.rows cfg) (C.cols cfg)) . V.fromList <$> createTiles 0 0 tileTypes)
  where
-  createTile :: Int -> C.TileType -> TISErrorOr PositionedTile
-  createTile i tileType =
-    let pos = i `divMod` C.cols cfg
+  createTiles :: Int -> Int -> [C.TileType] -> TISErrorOr [PositionedTile]
+  createTiles _ _ [] = Right []
+  createTiles asmIdx tileIdx (t : ts) = do
+    tile' <- createTile asmIdx tileIdx t
+    tiles' <- case t of
+      C.Conpute -> createTiles (asmIdx + 1) (tileIdx + 1) ts
+      _ -> createTiles asmIdx (tileIdx + 1) ts
+    return $ tile' : tiles'
+
+  createTile :: Int -> Int -> C.TileType -> TISErrorOr PositionedTile
+  createTile asmIdx tileIdx tileType =
+    let pos = tileIdx `divMod` C.cols cfg
      in case tileType of
-          C.Conpute -> PositionedTile pos i . ConnectedTile . T21.createTileState <$> getTileAsm i
-          C.Stack -> Right $ PositionedTile pos i $ ConnectedTile $ T30.T30 []
-          C.Disabled -> Right $ PositionedTile pos i $ ConnectedTile $ Inactive.InactiveTile
+          C.Conpute -> PositionedTile pos tileIdx . ConnectedTile . T21.createTileState <$> getTileAsm asmIdx
+          C.Stack -> Right $ PositionedTile pos tileIdx $ ConnectedTile $ T30.T30 []
+          C.Disabled -> Right $ PositionedTile pos tileIdx $ ConnectedTile $ Inactive.InactiveTile
 
   getTileAsm :: Int -> TISErrorOr T21.TileProgram
   getTileAsm i = case IM.lookup i asm of
