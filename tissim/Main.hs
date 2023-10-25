@@ -17,6 +17,8 @@ main = do
   print asm
 
   let initialCPUState = CPU.createInitialCPUState cfg asm
+  print initialCPUState
+
   finalSimState <- case initialCPUState of
     Left err -> error $ show err
     Right cpuState -> Run.run $ Run.SimState cpuState (ParserCfg.inputs cfg) (ParserCfg.outputs cfg)
