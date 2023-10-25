@@ -150,11 +150,14 @@ instance IsConnectedTile T21 where
 
   writeValueTo = setPortVal False -- External call
 
-  step t = case (runState . tileState) t of
-    Ready -> stepReady
-    WaitingOnRead _ Nothing -> t
-    WaitingOnRead _ (Just _) -> stepReady
-    WaitingOnWrite _ _ -> t
+  step t =
+    if null (tileProgram t)
+      then t
+      else case (runState . tileState) t of
+        Ready -> stepReady
+        WaitingOnRead _ Nothing -> t
+        WaitingOnRead _ (Just _) -> stepReady
+        WaitingOnWrite _ _ -> t
    where
     stepReady :: T21
     stepReady = stepReady'
