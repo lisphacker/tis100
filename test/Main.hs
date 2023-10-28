@@ -4,7 +4,9 @@ import Test.Hspec
 import Test.Tasty qualified
 import Test.Tasty.Hspec
 
-import Sim.Tests qualified as SimTests
+import Data.Type.Bool qualified as SimT21Tests
+import Sim.Examples qualified as SimExamplesTests
+import Sim.T21 qualified as SimT21Tests
 
 main :: IO ()
 main = do
@@ -12,4 +14,6 @@ main = do
   Test.Tasty.defaultMain test
 
 spec :: Spec
-spec = SimTests.simTestsSpec
+spec = parallel $ do
+  SimT21Tests.simTestsSpec
+  SimExamplesTests.simTestsSpec

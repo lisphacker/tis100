@@ -1,4 +1,4 @@
-module Sim.Tests where
+module Sim.Examples where
 
 import GHC.IO (unsafePerformIO)
 import TIS100.Parser.Config qualified as ParserCfg
@@ -30,6 +30,6 @@ testExampleAsm n asmFilePath cfgFilePath = do
     return (ParserCfg.refOutputs cfg, Run.outputs finalSimState)
 
 simTestsSpec :: Spec
-simTestsSpec = parallel $ do
+simTestsSpec = describe "Example Tests" $ parallel $ do
   testExampleAsm "segment00150" "examples/segment00150/segment00150.asm" "examples/segment00150/segment00150.cfg"
   testExampleAsm "segment20176" "examples/segment20176/segment20176.asm" "examples/segment20176/segment20176.cfg"
