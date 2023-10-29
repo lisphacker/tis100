@@ -26,11 +26,14 @@ mkT21TileWithPC initPc initAcc initBak instns =
 mkT21Tile :: Value -> Value -> [Instruction] -> T21
 mkT21Tile = mkT21TileWithPC 0
 
+ports :: [Port']
+ports = [UP, DOWN, LEFT, RIGHT]
+
 testADDSUB :: Bool -> Spec
 testADDSUB add = describe ("Testing " ++ insName) $ do
   testADDSUB_ACC
   testADDSUB_BAK
-  forM_ [UP, DOWN, LEFT, RIGHT] testADDSUB_Port
+  forM_ ports testADDSUB_Port
  where
   testADDSUB_ACC = do
     let init = mkT21Tile 10 20 [if add then ADD (Register ACC) else SUB (Register ACC)]
@@ -131,7 +134,29 @@ testJNZ = testConditionalJump "JNZ" (Value 10) (Value 0) NZ
 testJMP :: Spec
 testJMP = testUnconditionalJump
 testJRO :: Spec
-testJRO = undefined
+testJRO = describe "JRO" $ do
+  testJRO_ACC "without overflow/underflow" 2 (Address 5)
+  testJRO_ACC "underflow" (-5) (Address 0)
+  testJRO_ACC "overflow" 5 (Address 6)
+  forM_ ports testJRO_Port
+ where
+  testJRO_ACC desc initAcc tgtAddr = do
+    let next = step $ init initAcc (JRO (Register ACC))
+
+    describe ("Testing " ++ desc) $ do
+      it "Status" $ do
+        pc (tileState next) `shouldBe` tgtAddr
+
+  testJRO_Port port = do
+    let next = step $ init 2 (JRO (Port port))
+
+    describe ("Testing JRO " ++ show port) $ do
+      it "Status" $ do
+        pc (tileState next) `shouldBe` Address 3
+        runState (tileState next) `shouldBe` WaitingOnRead port Nothing
+
+  init initAcc ins = mkT21TileWithPC 3 initAcc 0 [NOP, NOP, NOP, ins, NOP, NOP, NOP]
+
 testJROI :: Spec
 testJROI = describe "JROI" $ do
   testJROI' "without overflow/underflow" (JROI (Value 2)) (Address 5)
@@ -149,7 +174,6 @@ testJROI = describe "JROI" $ do
 
 testMOVI :: Spec
 testMOVI = describe "Testing MOVI" $ do
-  let ports = [UP, DOWN, LEFT, RIGHT]
   testMOVI_ACC
   forM_ ports testMOVI_Port
  where
@@ -171,7 +195,6 @@ testMOVI = describe "Testing MOVI" $ do
 
 testMOV :: Spec
 testMOV = describe "Testing MOV" $ do
-  let ports = [UP, DOWN, LEFT, RIGHT]
   forM_ ports testMOV_ACC_Port
   forM_ ports testMOV_Port_ACC
  where
@@ -233,7 +256,7 @@ simTestsSpec = describe "Intra-T21 tests" $ parallel $ do
   testJLZ
   testJNZ
   testJMP
-  -- testJRO
+  testJRO
   testJROI
   testMOV
   testMOVI
