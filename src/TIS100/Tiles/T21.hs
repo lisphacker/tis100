@@ -139,7 +139,7 @@ addValueToPC :: (T21, Maybe Value) -> T21
 addValueToPC (t, Just (Value v)) = t{tileState = (tileState t){pc = nextPC}}
  where
   (Address pc') = pc $ tileState t
-  nextPC = Address $ (pc' + v) `mod` V.length (tileProgram t)
+  nextPC = Address $ max 0 $ min (pc' + v) (V.length (tileProgram t) - 1)
 addValueToPC (t, Nothing) = t
 
 instance IsConnectedTile T21 where

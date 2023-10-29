@@ -132,6 +132,20 @@ testJMP :: Spec
 testJMP = testUnconditionalJump
 testJRO :: Spec
 testJRO = undefined
+testJROI :: Spec
+testJROI = describe "JROI" $ do
+  testJROI' "without overflow/underflow" (JROI (Value 2)) (Address 5)
+  testJROI' "underflow" (JROI (Value (-5))) (Address 0)
+  testJROI' "overflow" (JROI (Value 5)) (Address 6)
+ where
+  testJROI' desc ins tgtAddr = do
+    let next = step $ init ins
+
+    describe ("Testing " ++ desc) $ do
+      it "Status" $ do
+        pc (tileState next) `shouldBe` tgtAddr
+
+  init ins = mkT21TileWithPC 3 2 0 [NOP, NOP, NOP, ins, NOP, NOP, NOP]
 
 testMOVI :: Spec
 testMOVI = describe "Testing MOVI" $ do
@@ -220,6 +234,7 @@ simTestsSpec = describe "Intra-T21 tests" $ parallel $ do
   testJNZ
   testJMP
   -- testJRO
+  testJROI
   testMOV
   testMOVI
   testNEG
