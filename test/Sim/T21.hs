@@ -82,6 +82,29 @@ testADDI = testADDSUBI True
 testSUBI :: Spec
 testSUBI = testADDSUBI False
 
+testConditionalJump :: String -> Value -> Value -> JumpCondition -> Spec
+testConditionalJump insName trueAcc falseAcc jc = describe ("Testing " ++ insName) $ do
+  testFalse (JCC jc (Address 5)) (Address 4)
+  testTrue "without overflow/underflow" (JCC jc (Address 5)) (Address 5)
+  testTrue "underflow" (JCC jc (Address (-5))) (Address 0)
+  testTrue "overflow" (JCC jc (Address 10)) (Address 6)
+ where
+  testFalse ins tgtAddr = do
+    let next = step $ init falseAcc ins
+
+    describe "Testing false" $ do
+      it "Status" $ do
+        pc (tileState next) `shouldBe` tgtAddr
+
+  testTrue desc ins tgtAddr = do
+    let next = step $ init trueAcc ins
+
+    describe ("Testing " ++ desc) $ do
+      it "Status" $ do
+        pc (tileState next) `shouldBe` tgtAddr
+
+  init initAcc ins = mkT21TileWithPC 3 initAcc 0 [NOP, NOP, NOP, ins, NOP, NOP, NOP]
+
 testUnconditionalJump :: Spec
 testUnconditionalJump = describe "Testing JMP" $ do
   testUnconditionalJump' "without overflow/underflow" (JMP (Address 5)) (Address 5)
@@ -98,13 +121,13 @@ testUnconditionalJump = describe "Testing JMP" $ do
   init ins = mkT21TileWithPC 3 2 0 [NOP, NOP, NOP, ins, NOP, NOP, NOP]
 
 testJEZ :: Spec
-testJEZ = undefined
+testJEZ = testConditionalJump "JEZ" (Value 0) (Value 10) EZ
 testJGZ :: Spec
-testJGZ = undefined
+testJGZ = testConditionalJump "JGZ" (Value 10) (Value 0) GZ
 testJLZ :: Spec
-testJLZ = undefined
+testJLZ = testConditionalJump "JLZ" (Value (-10)) (Value 0) LZ
 testJNZ :: Spec
-testJNZ = undefined
+testJNZ = testConditionalJump "JNZ" (Value 10) (Value 0) NZ
 testJMP :: Spec
 testJMP = testUnconditionalJump
 testJRO :: Spec
@@ -191,10 +214,10 @@ simTestsSpec :: Spec
 simTestsSpec = describe "Intra-T21 tests" $ parallel $ do
   testADD
   testADDI
-  -- testJEZ
-  -- testJGZ
-  -- testJLZ
-  -- testJNZ
+  testJEZ
+  testJGZ
+  testJLZ
+  testJNZ
   testJMP
   -- testJRO
   testMOV
