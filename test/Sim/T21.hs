@@ -23,13 +23,13 @@ mkT21Tile initAcc initBak instns =
           }
     }
 
-testADD :: Bool -> Spec
-testADD add = describe ("Testing " ++ insName) $ do
-  testADD_ACC
-  testADD_BAK
-  forM_ [UP, DOWN, LEFT, RIGHT] testADD_Port
+testADDSUB :: Bool -> Spec
+testADDSUB add = describe ("Testing " ++ insName) $ do
+  testADDSUB_ACC
+  testADDSUB_BAK
+  forM_ [UP, DOWN, LEFT, RIGHT] testADDSUB_Port
  where
-  testADD_ACC = do
+  testADDSUB_ACC = do
     let init = mkT21Tile 10 20 [if add then ADD (Register ACC) else SUB (Register ACC)]
     let next = step init
 
@@ -37,7 +37,7 @@ testADD add = describe ("Testing " ++ insName) $ do
       it "Status" $ do
         acc (tileState next) `shouldBe` Value (f 10 10)
 
-  testADD_BAK = do
+  testADDSUB_BAK = do
     let init = mkT21Tile 10 20 [if add then ADD (Register BAK) else SUB (Register BAK)]
     let next = step init
 
@@ -45,7 +45,7 @@ testADD add = describe ("Testing " ++ insName) $ do
       it "Status" $ do
         acc (tileState next) `shouldBe` Value (f 10 20)
 
-  testADD_Port port = do
+  testADDSUB_Port port = do
     let init = mkT21Tile 10 20 [if add then ADD (Port port) else SUB (Port port)]
     let next = step init
 
@@ -57,14 +57,26 @@ testADD add = describe ("Testing " ++ insName) $ do
   f = if add then (+) else (-)
   insName = if add then "ADD" else "SUB"
 
+testADD :: Spec
+testADD = testADDSUB True
+testSUB :: Spec
+testSUB = testADDSUB False
 testADDI :: Spec
-testADDI = do
-  let init = mkT21Tile 10 0 [ADDI (Value 20)]
+testADDI = testADDSUBI True
+testSUBI :: Spec
+testSUBI = testADDSUBI False
+
+testADDSUBI :: Bool -> Spec
+testADDSUBI add = do
+  let init = mkT21Tile 10 0 [if add then ADDI (Value 20) else SUBI (Value 20)]
   let next = step init
 
-  describe "Testing ADDI" $ do
+  describe ("Testing " ++ insName) $ do
     it "Status" $ do
-      acc (tileState next) `shouldBe` Value 30
+      acc (tileState next) `shouldBe` (f (Value 10) (Value 20))
+ where
+  f = if add then (+) else (-)
+  insName = if add then "ADDI" else "SUBI"
 
 testMOVI :: Spec
 testMOVI = describe "Testing MOVI" $ do
@@ -124,11 +136,23 @@ testNOP = describe "Testing NOPs" $ do
       it "Status" $ do
         next `shouldBe` init
 
+testSWP :: Spec
+testSWP = describe "Testing SWP" $ do
+  let init = mkT21Tile 10 20 [SWP]
+  let next = step init
+
+  describe "Testing SWP" $ do
+    it "Status" $ do
+      acc (tileState next) `shouldBe` Value 20
+      bak (tileState next) `shouldBe` Value 10
+
 simTestsSpec :: Spec
 simTestsSpec = describe "Intra-T21 tests" $ parallel $ do
-  testADD True
-  testADD False
+  testADD
   testADDI
   testMOV
   testMOVI
   testNOP
+  testSUB
+  testSUBI
+  testSWP
