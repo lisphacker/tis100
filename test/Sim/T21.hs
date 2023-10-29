@@ -8,8 +8,8 @@ import TIS100.Tiles.T21
 import Test.Hspec
 import Prelude hiding (init, last)
 
-mkT21Tile :: Value -> Value -> [Instruction] -> T21
-mkT21Tile initAcc initBak instns =
+mkT21TileWithPC :: Address -> Value -> Value -> [Instruction] -> T21
+mkT21TileWithPC initPc initAcc initBak instns =
   T21
     { tileProgram =
         V.fromList instns
@@ -18,10 +18,13 @@ mkT21Tile initAcc initBak instns =
           { acc = initAcc
           , bak = initBak
           , last = ANY
-          , pc = 0
+          , pc = initPc
           , runState = Ready
           }
     }
+
+mkT21Tile :: Value -> Value -> [Instruction] -> T21
+mkT21Tile = mkT21TileWithPC 0
 
 testADDSUB :: Bool -> Spec
 testADDSUB add = describe ("Testing " ++ insName) $ do
@@ -61,10 +64,6 @@ testADD :: Spec
 testADD = testADDSUB True
 testSUB :: Spec
 testSUB = testADDSUB False
-testADDI :: Spec
-testADDI = testADDSUBI True
-testSUBI :: Spec
-testSUBI = testADDSUBI False
 
 testADDSUBI :: Bool -> Spec
 testADDSUBI add = do
@@ -77,6 +76,39 @@ testADDSUBI add = do
  where
   f = if add then (+) else (-)
   insName = if add then "ADDI" else "SUBI"
+
+testADDI :: Spec
+testADDI = testADDSUBI True
+testSUBI :: Spec
+testSUBI = testADDSUBI False
+
+testUnconditionalJump :: Spec
+testUnconditionalJump = describe "Testing JMP" $ do
+  testUnconditionalJump' "without overflow/underflow" (JMP (Address 5)) (Address 5)
+  testUnconditionalJump' "underflow" (JMP (Address (-5))) (Address 0)
+  testUnconditionalJump' "overflow" (JMP (Address 10)) (Address 6)
+ where
+  testUnconditionalJump' desc ins tgtAddr = do
+    let next = step $ init ins
+
+    describe ("Testing " ++ desc) $ do
+      it "Status" $ do
+        pc (tileState next) `shouldBe` tgtAddr
+
+  init ins = mkT21TileWithPC 3 2 0 [NOP, NOP, NOP, ins, NOP, NOP, NOP]
+
+testJEZ :: Spec
+testJEZ = undefined
+testJGZ :: Spec
+testJGZ = undefined
+testJLZ :: Spec
+testJLZ = undefined
+testJNZ :: Spec
+testJNZ = undefined
+testJMP :: Spec
+testJMP = testUnconditionalJump
+testJRO :: Spec
+testJRO = undefined
 
 testMOVI :: Spec
 testMOVI = describe "Testing MOVI" $ do
@@ -122,6 +154,15 @@ testMOV = describe "Testing MOV" $ do
       it "Status" $ do
         runState (tileState next) `shouldBe` WaitingOnRead port Nothing
 
+testNEG :: Spec
+testNEG = describe "Testing NEG" $ do
+  let init = mkT21Tile 10 20 [NEG]
+  let next = step init
+
+  describe "Testing NEG" $ do
+    it "Status" $ do
+      acc (tileState next) `shouldBe` Value (-10)
+
 testNOP :: Spec
 testNOP = describe "Testing NOPs" $ do
   testNOP' NOP
@@ -150,8 +191,15 @@ simTestsSpec :: Spec
 simTestsSpec = describe "Intra-T21 tests" $ parallel $ do
   testADD
   testADDI
+  -- testJEZ
+  -- testJGZ
+  -- testJLZ
+  -- testJNZ
+  testJMP
+  -- testJRO
   testMOV
   testMOVI
+  testNEG
   testNOP
   testSUB
   testSUBI

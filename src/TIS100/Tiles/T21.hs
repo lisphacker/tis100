@@ -174,17 +174,22 @@ instance IsConnectedTile T21 where
         SUBI v -> incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (-)) (t, Just v) $ readRegOrPort (Register ACC) t
         SUB src -> incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (flip (-)) (readRegOrPort src t) (readRegOrPort (Register ACC) t)
         NEG -> incPC $ writeRegOrPort (Register ACC) $ maybeAddSub (-) (t, Just $ Value 0) $ readRegOrPort (Register ACC) t
-        JMP addr -> t{tileState = (tileState t){pc = addr}}
+        JMP addr -> t{tileState = (tileState t){pc = clampAddr addr}}
         JCC cond addr -> case cond of
-          EZ -> if acc (tileState t) == 0 then t{tileState = (tileState t){pc = addr}} else incPC t
-          NZ -> if acc (tileState t) /= 0 then t{tileState = (tileState t){pc = addr}} else incPC t
-          GZ -> if acc (tileState t) > 0 then t{tileState = (tileState t){pc = addr}} else incPC t
-          LZ -> if acc (tileState t) < 0 then t{tileState = (tileState t){pc = addr}} else incPC t
+          EZ -> if acc (tileState t) == 0 then t{tileState = (tileState t){pc = clampAddr addr}} else incPC t
+          NZ -> if acc (tileState t) /= 0 then t{tileState = (tileState t){pc = clampAddr addr}} else incPC t
+          GZ -> if acc (tileState t) > 0 then t{tileState = (tileState t){pc = clampAddr addr}} else incPC t
+          LZ -> if acc (tileState t) < 0 then t{tileState = (tileState t){pc = clampAddr addr}} else incPC t
         JROI v -> addValueToPC (t, Just v)
         JRO src -> addValueToPC $ readRegOrPort src t
+
       maybeAddSub :: (Value -> Value -> Value) -> (T21, Maybe Value) -> (T21, Maybe Value) -> (T21, Maybe Value)
       maybeAddSub f (t', Just v1) (_, Just v2) = (t', Just $ f v1 v2)
       maybeAddSub _ tv _ = tv -- Just to silence the linter
+      clampAddr :: Address -> Address
+      clampAddr (Address a) = Address $ max 0 $ min a maxAddr
+       where
+        maxAddr = V.length (tileProgram t) - 1
 
 readRegOrPort :: RegisterOrPort -> T21 -> (T21, Maybe Value)
 readRegOrPort rp t = case rp of
