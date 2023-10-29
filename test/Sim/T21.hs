@@ -67,27 +67,68 @@ testADDI = do
       acc (tileState next) `shouldBe` Value 30
 
 testMOVI :: Spec
-testMOVI = do
-  let init = mkT21Tile 10 20 [MOVI (Value 40) (Register ACC)]
-  let next = step init
+testMOVI = describe "Testing MOVI" $ do
+  let ports = [UP, DOWN, LEFT, RIGHT]
+  testMOVI_ACC
+  forM_ ports testMOVI_Port
+ where
+  testMOVI_ACC = do
+    let init = mkT21Tile 10 20 [MOVI (Value 40) (Register ACC)]
+    let next = step init
 
-  describe "Testing MOVI" $ do
-    it "Status" $ do
-      acc (tileState next) `shouldBe` Value 40
+    describe "Testing MOVI <val>, ACC" $ do
+      it "Status" $ do
+        acc (tileState next) `shouldBe` Value 40
+
+  testMOVI_Port port = do
+    let init = mkT21Tile 10 20 [MOVI (Value 40) (Port port)]
+    let next = step init
+
+    describe ("Testing MOVI <val>, " ++ show port) $ do
+      it "Status" $ do
+        runState (tileState next) `shouldBe` WaitingOnWrite port (Value 40)
+
+testMOV :: Spec
+testMOV = describe "Testing MOV" $ do
+  let ports = [UP, DOWN, LEFT, RIGHT]
+  forM_ ports testMOV_ACC_Port
+  forM_ ports testMOV_Port_ACC
+ where
+  testMOV_ACC_Port port = do
+    let init = mkT21Tile 10 20 [MOV (Register ACC) (Port port)]
+    let next = step init
+
+    describe ("Testing MOV ACC, " ++ show port) $ do
+      it "Status" $ do
+        runState (tileState next) `shouldBe` WaitingOnWrite port (acc $ tileState init)
+
+  testMOV_Port_ACC port = do
+    let init = mkT21Tile 10 20 [MOV (Port port) (Register ACC)]
+    let next = step init
+
+    describe ("Testing MOV " ++ show port ++ ", ACC") $ do
+      it "Status" $ do
+        runState (tileState next) `shouldBe` WaitingOnRead port Nothing
 
 testNOP :: Spec
-testNOP = do
-  let init = mkT21Tile 10 20 [NOP]
-  let next = step init
+testNOP = describe "Testing NOPs" $ do
+  testNOP' NOP
+  testNOP' (ADD (Register NIL))
+  testNOP' (SUB (Register NIL))
+ where
+  testNOP' ins = do
+    let init = mkT21Tile 10 20 [ins]
+    let next = step init
 
-  describe "Testing NOP" $ do
-    it "Status" $ do
-      next `shouldBe` init
+    describe ("Testing " ++ show ins) $ do
+      it "Status" $ do
+        next `shouldBe` init
 
 simTestsSpec :: Spec
 simTestsSpec = describe "Intra-T21 tests" $ parallel $ do
   testADD True
   testADD False
   testADDI
+  testMOV
   testMOVI
   testNOP
