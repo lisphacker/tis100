@@ -4,7 +4,6 @@ import Test.Hspec
 import Test.Tasty qualified
 import Test.Tasty.Hspec
 
-import Data.Type.Bool qualified as SimT21Tests
 import Sim.Examples qualified as SimExamplesTests
 import Sim.T21 qualified as SimT21Tests
 

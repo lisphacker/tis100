@@ -6,7 +6,7 @@ import TIS100.Tiles.Base
 import TIS100.Tiles.ConnectedTile (step)
 import TIS100.Tiles.T21
 import Test.Hspec
-import Prelude hiding (last)
+import Prelude hiding (init, last)
 
 mkT21Tile :: Value -> Value -> [Instruction] -> T21
 mkT21Tile initAcc initBak instns =
