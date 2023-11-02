@@ -1,6 +1,6 @@
 # tis100
 
-This is a Haskell implementation of an emulator for the Tesselated Intelligence System processor defined in the [Zachtronics game TIS100](http://www.zachtronics.com/tis-100/). It uses the assembly save format from the game and the layout and I/O specification defined in another [C-based open-source emulator implementation](https://github.com/Phlarx/tis).
+This is a Haskell implementation of an emulator for the Tesselated Intelligence System processor defined in the [Zachtronics game TIS-100](http://www.zachtronics.com/tis-100/). It uses the assembly save format from the game and the layout and I/O specification defined in another [C-based open-source emulator implementation](https://github.com/Phlarx/tis).
 
 The emulation is not quite complete since it does not yet support the ANY and LAST ports but everything else should work (🤞).
 
